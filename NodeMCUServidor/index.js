@@ -1,3 +1,5 @@
+// Se levanta un servidor web, utilizando Node.js y la librería Express.js
+
 const express = require('express');
 const app = express();
 const path = require('path');
