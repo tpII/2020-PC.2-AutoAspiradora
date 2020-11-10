@@ -8,17 +8,23 @@
 #define DIST_MIN 2
 #define DIST_MAX 4000
 
+// 56 ranuras por segundo => 571.8 mm/s
+
 void *funcion_sensor_ultrasonido(void *ptr);
 void *funcion_sensor_encoder_derecha(void * ptr);
 void *funcion_sensor_encoder_izquierda(void * ptr);
 
-typedef enum{ADELANTE, ATRAS, QUIETO} movimiento;//Indicar el movimiento de las ruedas
+typedef enum {ADELANTE, ATRAS, QUIETO} movimiento;//Indicar el movimiento de las ruedas
+typedef enum {MANUAL, AUTOMATICO} estado_modo;
+typedef enum {MOVIENDOSE, BARRIDO, ESQUIVANDO, MIRANDO_IZQUIERDA, MIRANDO_DERECHA} estado_automatico;
 
 char direccion = 'C';
 double distancia = 150;
 int encoderState_derecha=0; //Indica el valor que devuelve el encoder derecho
-int encoderState_izquierda=0; //Indica el valor que devuelve el encoder izquierdo
-
+int encoderState_izquierda=0; //Indica el valor que devuelve el encoder izquierda
+int robotEncendido = 0; //Booleano
+int trigger = 0; //triger del ultrasonido
+int echo; //echo del ultrasonido
 movimiento movimientoRuedaDerecha = ATRAS;
 movimiento movimientoRuedaIzquierda = ADELANTE;
 
@@ -36,6 +42,7 @@ void main(){
     char *mensaje2 = "Thread 2";
     char *mensaje3 = "Thread 3";
 
+    int cant;
 
     while((distancia > 10) && (ret == 0)){
         ret = pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido,(void*)mensaje);
@@ -49,11 +56,47 @@ void main(){
         pthread_create(&ruedaIzq, NULL, funcion_sensor_encoder_izquierda,(void*)mensaje3);
         pthread_join(ruedaDer,NULL);
         pthread_join(ruedaIzq,NULL);
+        printf("PROGRAMA PRINCIPAL: %d \n",cant);
     }
-        
 
     printf("SE ALCANZO EL OBSTÁCULO \n");
 
+
+
+}
+void MEF_Modo_Aspiradora(estado_modo estado){
+    switch(estado){
+        case MANUAL:
+            break;
+        case AUTOMATICO:
+            MEF_Automatico();
+            break;
+        default:
+    }
+}
+
+
+void MEF_Automatico(estado_automatico estado){
+    switch(estadoActual){
+        case MOVIENDOSE: 
+            printf("AVANZANDO\n");
+            
+            break;
+        case BARRIDO:
+
+            break;
+        case ESQUIVANDO:
+
+            break;
+        case MIRANDO_DERECHA:
+
+            break;
+        case MIRANDO_IZQUIERDA:
+
+            break;
+        
+        default:
+    }
 }
 
 void *funcion_sensor_ultrasonido(void * ptr){
@@ -61,20 +104,25 @@ void *funcion_sensor_ultrasonido(void * ptr){
     mensaje = (char *) ptr;
     printf("%s \n", (char *) ptr);
 
-    // Interpreta que todavía no se calculo la distancia en esta direccion
-    if(distancia == 0){
-        // Numero aleatorio en cm, con un decimal. En el rango de 2 a 4000mm
-        distancia = (double)((rand() % (DIST_MAX - DIST_MIN + 1)) + DIST_MIN) / 10; 
-    }
-    // Interpreta que el auto se está moviendo y calculando la distancia
-    else {
-        // Numero aleatorio en el rango de 2 al valor de distancia.
-        distancia = (double)((rand() % ((int)distancia*10 - DIST_MIN + 1)) + DIST_MIN) / 10; 
+    while(robotEncendido){
+        if(trigger == 1){
+            // Interpreta que todavía no se calculo la distancia en esta direccion
+            if(distancia == 0){
+                // Numero aleatorio en cm, con un decimal. En el rango de 2 a 4000mm
+                distancia = (double)((rand() % (DIST_MAX - DIST_MIN + 1)) + DIST_MIN) / 10; 
+            }
+            // Interpreta que el auto se está moviendo y calculando la distancia
+            else {
+                // Numero aleatorio en el rango de 2 al valor de distancia
+                distancia = (double)((rand() % ((int)distancia*10 - DIST_MIN + 1)) + DIST_MIN) / 10; 
+            }
+        }
     }
 }
 
 void *funcion_sensor_encoder_derecha(void * ptr){
     char *mensaje;
+    int cant;
     mensaje = (char *) ptr;
     printf("%s \n", (char *) ptr);
     if((movimientoRuedaDerecha==ATRAS) || (movimientoRuedaDerecha==ADELANTE)){//Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
