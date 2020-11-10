@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+  <meta charset='utf-8'>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .switch {
+  position: relative;
+  display: inline-block;
+  width: 75px;
+  height: 34px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(42px);
+  -ms-transform: translateX(42px);
+  transform: translateX(42px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+    body {
+      font-size: 140%;
+    }
+
+    #main {
+      display: table;
+      margin: auto;
+      padding: 0 10px 0 10px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    body input[type=button] {
+      padding: 10px 10px 10px 10px;
+      width: 100%;
+      background-color: #50FF50;
+      font-size: 120%;
+    }
+
+    .customBtn:focus {
+      outline: none;
+      box-shadow: none;
+      color: white;
+    }
+  </style>
+  <script>
+    function switchAdelante() {
+      var button_text = document.getElementById("Avanzar_button").value;
+      if (button_text == "Avanzar") {
+        document.getElementById("Avanzar_button").value = "Detener";
+        ajaxLoad('GOON');
+      }
+      else {
+        document.getElementById("Avanzar_button").value = "Avanzar";
+        ajaxLoad('GOOFF');
+      }
+    }
+
+
+    function switchRelay() {
+      var button_text = document.getElementById("Relay_button").value;
+      if (button_text == "Aspirar") {
+        document.getElementById("Relay_button").value = "No aspirar";
+        ajaxLoad('RELAYON');
+      }
+      else {
+        document.getElementById("Relay_button").value = "Aspirar";
+        ajaxLoad('RELAYOFF');
+      }
+    }
+
+    function switchAtras() {
+      var button_text = document.getElementById("Retroceder_button").value;
+      if (button_text == "Retroceder") {
+        document.getElementById("Retroceder_button").value = "Detenerse";
+        ajaxLoad('BACKON');
+      }
+      else {
+        document.getElementById("Retroceder_button").value = "Retroceder";
+        ajaxLoad('BACKOFF');
+      }
+    }
+
+    function switchDerecha() {
+      var button_text = document.getElementById("Derecha_button").value;
+      if (button_text == "Girar derecha") {
+        document.getElementById("Derecha_button").value = "Detenerse";
+        ajaxLoad('DERON');
+      }
+      else {
+        document.getElementById("Derecha_button").value = "Girar derecha";
+        ajaxLoad('DEROFF');
+      }
+    }
+
+    function switchIzquierda() {
+      var button_text = document.getElementById("Izquierda_button").value;
+      if (button_text == "Girar izquierda") {
+        document.getElementById("Izquierda_button").value = "Detenerse";
+        ajaxLoad('IZQON');
+      }
+      else {
+        document.getElementById("Izquierda_button").value = "Girar izquierda";
+        ajaxLoad('IZQOFF');
+      }
+    }
+
+    function switchAutomatico() {
+
+      var button_text = document.getElementById("Automatico_button").value;
+      if (button_text == "AAutomatico") {
+        document.getElementById("Automatico_button").value = "AManual";
+        ajaxLoad('AutoON');
+      }
+      else {
+        document.getElementById("Automatico_button").value = "AAutomatico";
+        ajaxLoad('AutoOFF');
+      }
+    }
+
+    var ajaxRequest = null;
+    if (window.XMLHttpRequest) { ajaxRequest = new XMLHttpRequest(); }
+    else { ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP"); }
+
+
+    function ajaxLoad(ajaxURL) {
+      if (!ajaxRequest) { alert("AJAX is not supported."); return; }
+
+      ajaxRequest.open("GET", ajaxURL, true);
+      ajaxRequest.onreadystatechange = function () {
+        if (ajaxRequest.readyState == 4 && ajaxRequest.status == 200) {
+          var ajaxResult = ajaxRequest.responseText;
+        }
+      }
+      ajaxRequest.send();
+    }
+
+  </script>
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <title>Walter</title>
+</head>
+
+<body>
+
+  <div id='main'>
+
+    <h2>TDPII - Robot Aspiradora</h2>
+    <hr>
+    <div class="container-fluid h-100">
+      <div class="row">
+        <div class="col-8 d-flex align-items-center">
+          <span style="font-size: x-large;">Modo automático</span>
+        </div>
+        <div class="col-2">
+          <label class="switch">
+            <input type="checkbox">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-8 d-flex align-items-center">
+          <span style="font-size: x-large;">Aspirar</span>
+        </div>
+        <div class="col-2">
+          <label class="switch">
+            <input type="checkbox">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-2 offset-5">
+          <button type="button" class="btn btn-primary"><img src="icons/caret-up-fill.svg" alt="" width="32" height="32"
+              title="Bootstrap"></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-2 offset-3">
+          <button type="button" class="btn btn-primary"><img src="icons/caret-left-fill.svg" alt="" width="32"
+              height="32" title="Bootstrap"></button>
+        </div>
+        <div class="col-2 offset-2">
+          <button type="button" class="btn btn-primary"><img src="icons/caret-right-fill.svg" alt="" width="32"
+              height="32" title="Bootstrap"></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-2 offset-5">
+          <button type="button" class="btn btn-primary"><img src="icons/caret-down-fill.svg" alt="" width="32"
+              height="32" title="Bootstrap"></button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="d-flex justify-content-center">
+      <img src="imagenes/mapa.png" width="300px" height="300px" style="align-self: center;">
+    </div>
+    <!-- <input type="button" id = "Avanzar_button" onclick="switchAdelante()" value="Avanzar"/>
+    <br><br>
+    <input type="button" id = "Izquierda_button" onclick="switchIzquierda()" value="Girar izquierda" /> 
+    <input type="button" id = "Derecha_button" onclick="switchDerecha()" value="Girar derecha" />  
+    <br><br>
+    <input type="button" id = "Retroceder_button" onclick="switchAtras()" value="Retroceder"/> 
+    <br><br><br>
+    <input type="button" id = "Relay_button" onclick="switchRelay()" value="Aspirar"/> 
+    <br><br><br> -->
+
+    <!-- <div>
+      <span id="CurrentState"></span>
+    </div>
+    <br><br><br> -->
+    <!-- <input type="button" id="Automatico_button" onclick="switchAutomatico()" value="AAutomatico" /> -->
+  </div>
+</body>
+
+</html>
