@@ -17,7 +17,7 @@ typedef enum{ADELANTE, ATRAS, QUIETO} movimiento;//Indicar el movimiento de las 
 char direccion = 'C';
 double distancia = 150;
 int encoderState_derecha=0; //Indica el valor que devuelve el encoder derecho
-int encoderState_izquierda=0; //Indica el valor que devuelve el encoder izquierda
+int encoderState_izquierda=0; //Indica el valor que devuelve el encoder izquierdo
 
 movimiento movimientoRuedaDerecha = ATRAS;
 movimiento movimientoRuedaIzquierda = ADELANTE;
@@ -80,7 +80,7 @@ void *funcion_sensor_encoder_derecha(void * ptr){
     if((movimientoRuedaDerecha==ATRAS) || (movimientoRuedaDerecha==ADELANTE)){//Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
         encoderState_derecha= 1 - encoderState_derecha; //Se hace un toggle entre 1 y 0
         printf("Rueda derecha: %d\n", encoderState_derecha);
-        usleep(25000);//Se espera 0.025 seg, esto cambiaria segun la velocidad de la rueda
+        usleep(8928);//Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
     }
 }
 
@@ -91,7 +91,7 @@ void *funcion_sensor_encoder_izquierda(void * ptr){
     if((movimientoRuedaIzquierda==ATRAS) || (movimientoRuedaIzquierda==ADELANTE)){//Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
         encoderState_izquierda = 1 - encoderState_izquierda; //Se hace un toggle entre 1 y 0
         printf("Rueda izquierda: %d\n", encoderState_izquierda);
-        usleep(25000);//Se espera 0.025 seg, esto cambiaria segun la velocidad de la rueda
+        usleep(8928);//Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
     }
     
 }
