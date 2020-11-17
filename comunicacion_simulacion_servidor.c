@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <string.h>
-#include "include/comunicacion_hilos_servidor.h"
+#include "include/comunicacion_simulacion_servidor.h"
 
 CURL * configurar_conexion(char *);
 int enviar_datos(CURL *, datos_recorrido);
