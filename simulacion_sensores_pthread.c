@@ -64,6 +64,9 @@ int encoderState_izquierda_anterior = 0;
 int robotEncendido = 0; //Booleano
 int trigger = 0;        //triger del ultrasonido
 int echo;               //echo del ultrasonido
+int distanciaDerecha; //Distancia medida por el ultrasonico a la derecha
+int distanciaIzquierda; //Distancia medida por el ultrasonico a la izquierda
+int distanciaCentro; //Distancia medida por el ultrasonico al centro
 
 int contPrueba;
 
@@ -144,7 +147,7 @@ void main()
     // pthread_join(ultrasonido, NULL);
     // pthread_join(ruedaDer, NULL);
     // pthread_join(ruedaIzq, NULL);
-
+    Secuencia_Inicio();
     while (1)
     {
         MEF_Modo_Aspiradora();
@@ -206,11 +209,27 @@ void MEF_Automatico()
         // printf("Estado: Mirando derecha\n");
         if (flagServo)
         {
+            distanciaDerecha=distancia;
+            distancia=0;
             flagServo = 0;
             if (!hayObstaculo)
             {
-                estadoAnterior = estadoActual;
-                estadoActual = GIRANDO_DERECHA;
+                if (estadoAnterior == MIRANDO_IZQUIERDA)
+                {
+                    if ((distanciaIzquierda > 10) && (distanciaDerecha < distanciaIzquierda)){
+                        estadoAnterior = estadoActual;
+                        estadoActual = GIRANDO_IZQUIERDA;
+
+                    }
+                    else{
+                        estadoAnterior = estadoActual;
+                        estadoActual = GIRANDO_DERECHA;
+                    }
+                }
+                else{
+                    estadoAnterior=estadoActual;
+                    estadoActual=MIRANDO_IZQUIERDA;
+                }
             }
             else
             {
@@ -231,12 +250,29 @@ void MEF_Automatico()
     case MIRANDO_IZQUIERDA:
         // printf("Estado: Mirando izquierda\n");
         if (flagServo)
-        {
+        {   
+            distanciaIzquierda=distancia;
+            distancia=0;
             flagServo = 0;
             if (!hayObstaculo)
             {
-                estadoAnterior = estadoActual;
-                estadoActual = GIRANDO_IZQUIERDA;
+                if (estadoAnterior == MIRANDO_DERECHA)
+                {
+                    if ((distanciaDerecha > 10) && (distanciaIzquierda < distanciaDerecha)){
+                        estadoAnterior = estadoActual;
+                        estadoActual = GIRANDO_DERECHA;
+
+                    }
+                    else{
+                        estadoAnterior = estadoActual;
+                        estadoActual = GIRANDO_IZQUIERDA;
+                    }
+                }
+                else{
+                    estadoAnterior=estadoActual;
+                    estadoActual=MIRANDO_DERECHA;
+                }
+                
             }
             else
             {
