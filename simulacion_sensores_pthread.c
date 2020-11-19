@@ -8,7 +8,7 @@
 #define DIST_MIN 2
 #define DIST_MAX 4000
 
-#define INT_GIRO_90 900 //Cantidad de interrupciones para hacer un giro de 90 grados
+#define INT_GIRO_90 900   //Cantidad de interrupciones para hacer un giro de 90 grados
 #define INT_GIRO_180 1800 //Cantidad de interrupciones para hacer un giro de 180 grados
 
 // 56 ranuras por segundo => 571.8 mm/s
@@ -54,6 +54,7 @@ void motorGirarIzquierda();
 void motorGirarDerecha();
 void motorGirar180();
 void contar_interrupciones_giro(int cont);
+void Secuencia_Inicio(void);
 
 char direccion = 'C';
 double distancia = 150;
@@ -64,9 +65,10 @@ int encoderState_izquierda_anterior = 0;
 int robotEncendido = 0; //Booleano
 int trigger = 0;        //triger del ultrasonido
 int echo;               //echo del ultrasonido
-int distanciaDerecha; //Distancia medida por el ultrasonico a la derecha
+int distanciaDerecha;   //Distancia medida por el ultrasonico a la derecha
 int distanciaIzquierda; //Distancia medida por el ultrasonico a la izquierda
-int distanciaCentro; //Distancia medida por el ultrasonico al centro
+int distanciaCentro;    //Distancia medida por el ultrasonico al centro
+int hayObstaculo180;    //Indica si hay obstaculo luego de hacer un giro de 180 grados
 
 int contPrueba;
 
@@ -120,7 +122,7 @@ void main()
 
     int cant;
 
-    estadoActual = MOVIENDOSE;
+    estadoActual = BARRIDO;
     estadoActualModo = AUTOMATICO;
 
     // while ((distancia > 10) && (ret == 0))
@@ -209,26 +211,28 @@ void MEF_Automatico()
         // printf("Estado: Mirando derecha\n");
         if (flagServo)
         {
-            distanciaDerecha=distancia;
-            distancia=0;
+            distanciaDerecha = distancia;
+            distancia = 0;
             flagServo = 0;
             if (!hayObstaculo)
             {
                 if (estadoAnterior == MIRANDO_IZQUIERDA)
                 {
-                    if ((distanciaIzquierda > 10) && (distanciaDerecha < distanciaIzquierda)){
+                    if ((distanciaIzquierda > 10) && (distanciaDerecha < distanciaIzquierda))
+                    {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_IZQUIERDA;
-
                     }
-                    else{
+                    else
+                    {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_DERECHA;
                     }
                 }
-                else{
-                    estadoAnterior=estadoActual;
-                    estadoActual=MIRANDO_IZQUIERDA;
+                else
+                {
+                    estadoAnterior = estadoActual;
+                    estadoActual = MIRANDO_IZQUIERDA;
                 }
             }
             else
@@ -250,29 +254,30 @@ void MEF_Automatico()
     case MIRANDO_IZQUIERDA:
         // printf("Estado: Mirando izquierda\n");
         if (flagServo)
-        {   
-            distanciaIzquierda=distancia;
-            distancia=0;
+        {
+            distanciaIzquierda = distancia;
+            distancia = 0;
             flagServo = 0;
             if (!hayObstaculo)
             {
                 if (estadoAnterior == MIRANDO_DERECHA)
                 {
-                    if ((distanciaDerecha > 10) && (distanciaIzquierda < distanciaDerecha)){
+                    if ((distanciaDerecha > 10) && (distanciaIzquierda < distanciaDerecha))
+                    {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_DERECHA;
-
                     }
-                    else{
+                    else
+                    {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_IZQUIERDA;
                     }
                 }
-                else{
-                    estadoAnterior=estadoActual;
-                    estadoActual=MIRANDO_DERECHA;
+                else
+                {
+                    estadoAnterior = estadoActual;
+                    estadoActual = MIRANDO_DERECHA;
                 }
-                
             }
             else
             {
@@ -293,12 +298,27 @@ void MEF_Automatico()
 
     case GIRANDO_IZQUIERDA:
     case GIRANDO_DERECHA:
-    case GIRANDO_180:
         if (flagMotor)
         {
             flagMotor = 0;
             estadoAnterior = estadoActual;
             estadoActual = MOVIENDOSE;
+        }
+        break;
+    case GIRANDO_180:
+        if (flagMotor)
+        {
+            flagMotor = 0;
+            if (hayObstaculo180)
+            {
+                estadoAnterior = estadoActual;
+                estadoActual = BARRIDO;
+            }
+            else
+            {
+                estadoAnterior = estadoActual;
+                estadoActual = MOVIENDOSE;
+            }
         }
         break;
     default:
@@ -350,25 +370,35 @@ void MEF_Accion_Automatico()
         flagServo = 1;
         break;
     case GIRANDO_IZQUIERDA:
-        contPrueba=0;
+        contPrueba = 0;
         motorGirarIzquierda();
         printf("Se generon %d interrupciones\n", contPrueba);
         // Detener();
         flagMotor = 1;
         break;
     case GIRANDO_DERECHA:
-        contPrueba=0;
+        contPrueba = 0;
         motorGirarDerecha();
         printf("Se generon %d interrupciones\n", contPrueba);
         // Detener();
         flagMotor = 1;
         break;
     case GIRANDO_180:
-        contPrueba=0;
+        contPrueba = 0;
         motorGirar180();
         printf("Se generon %d interrupciones\n", contPrueba);
-        // Detener();
         flagMotor = 1;
+        Observar();
+        if (distancia > 10)
+        {
+            hayObstaculo180 = 0;
+        }
+        else
+        {
+            hayObstaculo180 = 1;
+        }
+        // Detener();
+
         break;
     default:
         break;
@@ -398,6 +428,14 @@ void *funcion_sensor_ultrasonido(void *ptr)
                 distancia = (double)((rand() % ((int)distancia * 10 - DIST_MIN + 1)) + DIST_MIN) / 10;
             }
 
+            //Esto comentado aca abajo es para forzar a que gire 180 grados
+            // if(estadoActual==MIRANDO_IZQUIERDA || estadoActual==MIRANDO_DERECHA){
+            //     distancia=8;
+            // }
+            // else{
+            //     distancia=100;
+            // }
+
             sem_post(&semaforoDistancia);
             trigger = 0;
         }
@@ -414,9 +452,9 @@ void *funcion_sensor_encoder_derecha(void *ptr)
     {
         //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
         if ((movimientoRuedaDerecha == ATRAS) || (movimientoRuedaDerecha == ADELANTE))
-        {                                                  
+        {
             encoderState_derecha = 1 - encoderState_derecha; //Se hace un toggle entre 1 y 0
-            if (encoderState_derecha==0)
+            if (encoderState_derecha == 0)
                 contPrueba++;
             // printf("Rueda derecha: %d\n", encoderState_derecha);
             usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
@@ -428,15 +466,15 @@ void *funcion_sensor_encoder_izquierda(void *ptr)
 {
     char *mensaje;
     mensaje = (char *)ptr;
-    printf("%s \n", (char *)ptr);
+    //printf("%s \n", (char *)ptr);
     while (1)
     {
         //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
         if ((movimientoRuedaIzquierda == ATRAS) || (movimientoRuedaIzquierda == ADELANTE))
-        {        
-                                                             
+        {
+
             encoderState_izquierda = 1 - encoderState_izquierda; //Se hace un toggle entre 1 y 0
-            if (encoderState_izquierda==0)
+            if (encoderState_izquierda == 0)
                 contPrueba++;
             // printf("Rueda izquierda: %d\n", encoderState_izquierda);
             usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
@@ -498,8 +536,8 @@ void servoMirarIzquierda()
 }
 
 void motorGirarIzquierda()
-{   
-    int cont=INT_GIRO_90;
+{
+    int cont = INT_GIRO_90;
     printf("Girando robot a izquierda\n");
     movimientoRuedaIzquierda = ATRAS;
     movimientoRuedaDerecha = QUIETO;
@@ -512,8 +550,8 @@ void motorGirarIzquierda()
 }
 
 void motorGirarDerecha()
-{   
-    int cont=INT_GIRO_90;
+{
+    int cont = INT_GIRO_90;
     printf("Girando robot a derecha\n");
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
@@ -526,9 +564,9 @@ void motorGirarDerecha()
 }
 
 void motorGirar180()
-{   
+{
     printf("Girando robot 180º\n");
-    int cont=INT_GIRO_180;
+    int cont = INT_GIRO_180;
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
     contar_interrupciones_giro(cont);
@@ -537,7 +575,8 @@ void motorGirar180()
     usleep(2000000);
 }
 
-void contar_interrupciones_giro(int cont){
+void contar_interrupciones_giro(int cont)
+{
     while (cont != 0)
     {
         if (encoderState_izquierda != encoderState_izquierda_anterior)
@@ -549,4 +588,8 @@ void contar_interrupciones_giro(int cont){
             encoderState_izquierda_anterior = encoderState_izquierda;
         }
     }
+}
+
+void Secuencia_Inicio(void)
+{
 }
