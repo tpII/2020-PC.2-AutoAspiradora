@@ -8,6 +8,9 @@
 #define DIST_MIN 2
 #define DIST_MAX 4000
 
+#define INT_GIRO_90 900 //Cantidad de interrupciones para hacer un giro de 90 grados
+#define INT_GIRO_180 1800 //Cantidad de interrupciones para hacer un giro de 180 grados
+
 // 56 ranuras por segundo => 571.8 mm/s
 
 void *funcion_sensor_ultrasonido(void *ptr);
@@ -50,14 +53,19 @@ void servoMirarIzquierda();
 void motorGirarIzquierda();
 void motorGirarDerecha();
 void motorGirar180();
+void contar_interrupciones_giro(int cont);
 
 char direccion = 'C';
 double distancia = 150;
-int encoderState_derecha = 0;   //Indica el valor que devuelve el encoder derecho
+int encoderState_derecha = 0; //Indica el valor que devuelve el encoder derecho
+int encoderState_derecha_anterior = 0;
 int encoderState_izquierda = 0; //Indica el valor que devuelve el encoder izquierda
-int robotEncendido = 0;         //Booleano
-int trigger = 0;                //triger del ultrasonido
-int echo;                       //echo del ultrasonido
+int encoderState_izquierda_anterior = 0;
+int robotEncendido = 0; //Booleano
+int trigger = 0;        //triger del ultrasonido
+int echo;               //echo del ultrasonido
+
+int contPrueba;
 
 movimiento movimientoRuedaDerecha = ATRAS;
 movimiento movimientoRuedaIzquierda = ADELANTE;
@@ -130,8 +138,8 @@ void main()
     // }
 
     ret = pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido, (void *)mensaje);
-    //pthread_create(&ruedaDer, NULL, funcion_sensor_encoder_derecha, (void *)mensaje2);
-    //pthread_create(&ruedaIzq, NULL, funcion_sensor_encoder_izquierda, (void *)mensaje3);
+    pthread_create(&ruedaDer, NULL, funcion_sensor_encoder_derecha, (void *)mensaje2);
+    pthread_create(&ruedaIzq, NULL, funcion_sensor_encoder_izquierda, (void *)mensaje3);
 
     // pthread_join(ultrasonido, NULL);
     // pthread_join(ruedaDer, NULL);
@@ -306,17 +314,23 @@ void MEF_Accion_Automatico()
         flagServo = 1;
         break;
     case GIRANDO_IZQUIERDA:
+        contPrueba=0;
         motorGirarIzquierda();
+        printf("Se generon %d interrupciones\n", contPrueba);
         // Detener();
         flagMotor = 1;
         break;
     case GIRANDO_DERECHA:
+        contPrueba=0;
         motorGirarDerecha();
+        printf("Se generon %d interrupciones\n", contPrueba);
         // Detener();
         flagMotor = 1;
         break;
     case GIRANDO_180:
+        contPrueba=0;
         motorGirar180();
+        printf("Se generon %d interrupciones\n", contPrueba);
         // Detener();
         flagMotor = 1;
         break;
@@ -335,7 +349,6 @@ void *funcion_sensor_ultrasonido(void *ptr)
     {
         if (trigger == 1)
         {
-            printf("Trigger 1\n");
             // Interpreta que todavía no se calculo la distancia en esta direccion
             if (distancia == 0)
             {
@@ -360,12 +373,18 @@ void *funcion_sensor_encoder_derecha(void *ptr)
     char *mensaje;
     int cant;
     mensaje = (char *)ptr;
-    printf("%s \n", (char *)ptr);
-    if ((movimientoRuedaDerecha == ATRAS) || (movimientoRuedaDerecha == ADELANTE))
-    {                                                    //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
-        encoderState_derecha = 1 - encoderState_derecha; //Se hace un toggle entre 1 y 0
-        printf("Rueda derecha: %d\n", encoderState_derecha);
-        usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
+    // printf("%s \n", (char *)ptr);
+    while (1)
+    {
+        //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
+        if ((movimientoRuedaDerecha == ATRAS) || (movimientoRuedaDerecha == ADELANTE))
+        {                                                  
+            encoderState_derecha = 1 - encoderState_derecha; //Se hace un toggle entre 1 y 0
+            if (encoderState_derecha==0)
+                contPrueba++;
+            // printf("Rueda derecha: %d\n", encoderState_derecha);
+            usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
+        }
     }
 }
 
@@ -374,22 +393,33 @@ void *funcion_sensor_encoder_izquierda(void *ptr)
     char *mensaje;
     mensaje = (char *)ptr;
     printf("%s \n", (char *)ptr);
-    if ((movimientoRuedaIzquierda == ATRAS) || (movimientoRuedaIzquierda == ADELANTE))
-    {                                                        //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
-        encoderState_izquierda = 1 - encoderState_izquierda; //Se hace un toggle entre 1 y 0
-        printf("Rueda izquierda: %d\n", encoderState_izquierda);
-        usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
+    while (1)
+    {
+        //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
+        if ((movimientoRuedaIzquierda == ATRAS) || (movimientoRuedaIzquierda == ADELANTE))
+        {        
+                                                             
+            encoderState_izquierda = 1 - encoderState_izquierda; //Se hace un toggle entre 1 y 0
+            if (encoderState_izquierda==0)
+                contPrueba++;
+            // printf("Rueda izquierda: %d\n", encoderState_izquierda);
+            usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
+        }
     }
 }
 
 void Detener()
 {
+    movimientoRuedaIzquierda = QUIETO;
+    movimientoRuedaDerecha = QUIETO;
     printf("Detenido\n");
     usleep(2000000);
 }
 
 void MoverAdelante()
 {
+    movimientoRuedaIzquierda = ADELANTE;
+    movimientoRuedaDerecha = ADELANTE;
     printf("Avanzando\n");
     usleep(2000000);
 }
@@ -432,25 +462,55 @@ void servoMirarIzquierda()
 }
 
 void motorGirarIzquierda()
-{
+{   
+    int cont=INT_GIRO_90;
     printf("Girando robot a izquierda\n");
-    usleep(2000000);
+    movimientoRuedaIzquierda = ATRAS;
+    movimientoRuedaDerecha = QUIETO;
+    //usleep(2000000);
+    contar_interrupciones_giro(cont);
+    movimientoRuedaIzquierda = QUIETO;
+    movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a izquierda\n");
     usleep(2000000);
 }
 
 void motorGirarDerecha()
-{
+{   
+    int cont=INT_GIRO_90;
     printf("Girando robot a derecha\n");
-    usleep(2000000);
+    movimientoRuedaIzquierda = ADELANTE;
+    movimientoRuedaDerecha = QUIETO;
+    //usleep(2000000);
+    contar_interrupciones_giro(cont);
+    movimientoRuedaIzquierda = QUIETO;
+    movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a derecha\n");
     usleep(2000000);
 }
 
 void motorGirar180()
-{
+{   
     printf("Girando robot 180º\n");
-    usleep(2000000);
+    int cont=INT_GIRO_180;
+    movimientoRuedaIzquierda = ADELANTE;
+    movimientoRuedaDerecha = QUIETO;
+    contar_interrupciones_giro(cont);
+    //usleep(2000000);
     printf("Robot girado 180º\n");
     usleep(2000000);
+}
+
+void contar_interrupciones_giro(int cont){
+    while (cont != 0)
+    {
+        if (encoderState_izquierda != encoderState_izquierda_anterior)
+        {
+            if (encoderState_izquierda == 0)
+            {
+                cont--;
+            }
+            encoderState_izquierda_anterior = encoderState_izquierda;
+        }
+    }
 }
