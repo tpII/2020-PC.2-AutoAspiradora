@@ -9,101 +9,151 @@
 //     nodoAdyacentes* proximo;
 // } as nodoAdyacentes;
 
-typedef struct vertice {
-    int visitado; // 1 true, 0 false, -1 obstaculo
+typedef enum Direccion
+{
+    Arriba,
+    Derecha,
+    Abajo,
+    Izquierda
+} direccion;
+
+typedef enum EstadoNodo
+{
+    Visitado,
+    NoVisitado,
+    Inaccesible
+} estadoNodo;
+
+typedef struct vertice
+{
+    estadoNodo visitado; // 1 true, 0 false, -1 obstaculo
     int x;
     int y;
 } vertice;
 
-typedef struct nodo{
+typedef struct nodo
+{
     vertice actual;
-    vertice *adyacentes;
-    struct nodo* proximo;
+    struct nodo *adyacentes[4];
+    struct nodo *proximo;
 } nodo;
 
-typedef struct lista{
-    nodo* cabeza;
-    nodo* cola;
+typedef struct lista
+{
+    nodo *cabeza;
+    nodo *cola;
 } listaVertices;
 
-typedef struct grafo{
+typedef struct grafo
+{
+    // int vertices;
     listaVertices lista;
 } grafo;
 
-void agregar_vertice(grafo* grafo, vertice actual, vertice* adyacentes){ 
-    nodo* nuevoNodo = (nodo*) malloc(sizeof(nodo));  
+nodo* agregar_vertice(grafo *grafo, vertice actual)
+{
+    int i;
+
+    nodo *nuevoNodo = (nodo *)malloc(sizeof(nodo));
     nuevoNodo->actual = actual;
-    nuevoNodo->adyacentes = adyacentes;
+    // Se inicializan en NULL los 4 nodos adyacentes
+    for(i=0; i<4; i++){
+        nuevoNodo->adyacentes[i] = NULL;
+    }
     nuevoNodo->proximo = NULL;
-    if(grafo->lista.cabeza == NULL){
+    if (grafo->lista.cabeza == NULL)
+    {
         grafo->lista.cabeza = nuevoNodo;
         grafo->lista.cola = nuevoNodo;
     }
-    else{
+    else
+    {
         grafo->lista.cola->proximo = nuevoNodo;
         grafo->lista.cola = grafo->lista.cola->proximo;
     }
+    return nuevoNodo;
 }
 
-void inicializar_grafo(grafo * grafo){
+void agregar_adyacente(nodo *actual, nodo *destino, direccion dirDestino)
+{
+    // Se agrega el nodo destino como adyacente del actual
+    actual->adyacentes[dirDestino] = destino;
+
+    // Se agrega el nodo actual como adyacente del nodo destino
+    switch (dirDestino)
+    {
+        case Arriba:
+            destino->adyacentes[Abajo] = actual;
+            break;
+        case Abajo:
+            destino->adyacentes[Arriba] = actual;
+            break;
+        case Derecha:
+            destino->adyacentes[Izquierda] = actual;
+            break;
+        case Izquierda:
+            destino->adyacentes[Derecha] = actual;
+            break;
+        default:
+            break;
+    }
+}
+
+void inicializar_grafo(grafo *grafo)
+{
     grafo->lista.cola = NULL;
     grafo->lista.cabeza = grafo->lista.cola;
 }
 
-void main(){
-    grafo grafo;    
+void main()
+{
+    nodo *nodoAux;;
+    grafo grafo;
+
+    int i;
+    
+    nodo *verticeActual;
+    nodo *verticeProximo;
     inicializar_grafo(&grafo);
-    vertice v;
-    v.x = 0;
-    v.y = 0;
-    v.visitado = 1;
-    vertice ady[4];
-    ady[0].x = 0;
-    ady[0].y = -1;
-    ady[0].visitado = 0;
+    vertice actual;
+    actual.x = 0;
+    actual.y = 0;
+    actual.visitado = Visitado;
+  
+    verticeActual = agregar_vertice(&grafo, actual);
 
-    ady[1].x = 1;
-    ady[1].y = 0;
-    ady[1].visitado = 0;
-    
-    ady[2].x = 0;
-    ady[2].y = 1;
-    ady[2].visitado = 0;
-    
-    ady[3].x = -1;
-    ady[3].y = 0;
-    ady[3].visitado = -1;
+    vertice proximo;
+    proximo.x = 1;
+    proximo.y = 0;
+    proximo.visitado = NoVisitado;
 
-    agregar_vertice(&grafo,v,ady);
+    verticeProximo = agregar_vertice(&grafo, proximo);
 
-    v.x = 1;
-    v.y = 0; 
+    agregar_adyacente(verticeActual, verticeProximo, Derecha);
 
-    agregar_vertice(&grafo,v,ady);
-
-    // Imprimimos
-    printf("Coordenada X del primer vertice: %d \n",grafo.lista.cabeza->actual.x);
-
-    // Imprimimos
-    printf("Adyacentes del primer vertice %d %d %d %d \n",grafo.lista.cabeza->adyacentes[0].x,grafo.lista.cabeza->adyacentes[1].x,grafo.lista.cabeza->adyacentes[2].x,grafo.lista.cabeza->adyacentes[3].x);
-
-    // Imprimimos
-    printf("Coordenada X del ultimo vertice: %d \n",grafo.lista.cola->actual.x);
-
-}
-
-
-
-buscarDireccionOptima();
-posicionarse()
-avanzo(direccionOptima){
-    crearVertice();
-    while (no revise 4 direcciones){
-        if (no hay obstaculo && No visite el siguiente)
-            avanzo(direccionOptima);
-        else 
-            buscarDireccionOptima();
-            posicionarse();
-            avanzo(direccionOptima);
+    nodoAux=grafo.lista.cabeza;
+    while(nodoAux!=NULL){
+        printf("\n x: %d y: %d |",nodoAux->actual.x,nodoAux->actual.y);
+        for(i=0; i<4; i++){
+            if(nodoAux->adyacentes[i] != NULL){
+                printf("-> x: %d y: %d", nodoAux->adyacentes[i]->actual.x, nodoAux->adyacentes[i]->actual.y);
+            }
+        }
+         nodoAux = nodoAux->proximo;
     }
 }
+
+// buscarDireccionOptima();
+// posicionarse()
+// avanzo(direccionOptima){
+//     crearVertice();
+//     while (no revise 4 direcciones){
+//         if (no hay obstaculo && No visite el siguiente)
+//             avanzo(direccionOptima);
+//         else
+//             buscarDireccionOptima();
+//             posicionarse();
+//             avanzo(direccionOptima);
+//     }
+// }
+
