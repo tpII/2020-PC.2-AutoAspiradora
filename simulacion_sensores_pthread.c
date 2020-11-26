@@ -56,6 +56,22 @@ void motorGirar180();
 void contar_interrupciones_giro(int cont);
 void Secuencia_Inicio(void);
 
+// 0 -> lugar accesible, 1 -> obstáculo
+int habitacion[10][10] = 
+{
+    {1,1,1,1,1,1,1,1,1,1},
+    {1,0,0,1,1,1,1,0,0,1},
+    {1,0,0,1,1,1,1,0,0,1},
+    {1,0,0,0,0,1,1,0,0,1},
+    {1,0,0,0,0,1,1,0,0,1},
+    {1,0,1,1,0,0,0,0,0,1},
+    {1,0,0,0,0,0,1,1,0,1},
+    {1,1,1,1,0,0,1,1,0,1},
+    {1,1,1,1,0,0,0,0,0,1},
+    {1,1,1,1,1,1,1,1,1,1}
+};
+int posX;
+int posY;
 char direccion = 'C';
 double distancia = 150;
 int encoderState_derecha = 0; //Indica el valor que devuelve el encoder derecho
@@ -407,6 +423,9 @@ void MEF_Accion_Automatico()
 
 void *funcion_sensor_ultrasonido(void *ptr)
 {
+
+    // CON LAS POSICIONES X E Y Y LA DIRECCION, SABER IS HAY OBSTACULO O NO USANDO LA MATRIZ 
+
     char *mensaje;
     mensaje = (char *)ptr;
     //printf("%s \n", (char *)ptr);
@@ -414,19 +433,19 @@ void *funcion_sensor_ultrasonido(void *ptr)
     while (1)
     {
         if (trigger == 1)
-        {
-            // Interpreta que todavía no se calculo la distancia en esta direccion
-            if (distancia == 0)
-            {
-                // Numero aleatorio en cm, con un decimal. En el rango de 2 a 4000mm
-                distancia = (double)((rand() % (DIST_MAX - DIST_MIN + 1)) + DIST_MIN) / 10;
-            }
-            // Interpreta que el auto se está moviendo y calculando la distancia
-            else
-            {
-                // Numero aleatorio en el rango de 2 al valor de distancia
-                distancia = (double)((rand() % ((int)distancia * 10 - DIST_MIN + 1)) + DIST_MIN) / 10;
-            }
+        {  
+            // // Interpreta que todavía no se calculo la distancia en esta direccion
+            // if (distancia == 0)
+            // {
+            //     // Numero aleatorio en cm, con un decimal. En el rango de 2 a 4000mm
+            //     distancia = (double)((rand() % (DIST_MAX - DIST_MIN + 1)) + DIST_MIN) / 10;
+            // }
+            // // Interpreta que el auto se está moviendo y calculando la distancia
+            // else
+            // {
+            //     // Numero aleatorio en el rango de 2 al valor de distancia
+            //     distancia = (double)((rand() % ((int)distancia * 10 - DIST_MIN + 1)) + DIST_MIN) / 10;
+            // }
 
             //Esto comentado aca abajo es para forzar a que gire 180 grados
             // if(estadoActual==MIRANDO_IZQUIERDA || estadoActual==MIRANDO_DERECHA){
@@ -435,6 +454,21 @@ void *funcion_sensor_ultrasonido(void *ptr)
             // else{
             //     distancia=100;
             // }
+
+           // Utiliza la matrix que representa la habitación para calcular la distancia
+            int xAux = posX;
+            int yAux = posY;
+            while(habitacion[xAux][yAux] != 1){
+                switch (direccion)
+                {
+                case :
+                    /* code */
+                    break;
+                
+                default:
+                    break;
+                }
+            }
 
             sem_post(&semaforoDistancia);
             trigger = 0;
