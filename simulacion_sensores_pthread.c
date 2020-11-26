@@ -55,6 +55,7 @@ void motorGirarDerecha();
 void motorGirar180();
 void contar_interrupciones_giro(int cont);
 void Secuencia_Inicio(void);
+void delay(void);
 
 // 0 -> lugar accesible, 1 -> obstáculo
 int habitacion[10][10] = 
@@ -173,6 +174,7 @@ void main()
     }
     //printf("SE ALCANZO EL OBSTÁCULO \n");
 }
+
 void MEF_Modo_Aspiradora()
 { //Esta es la maquina de estados principal
     switch (estadoActualModo)
@@ -521,7 +523,7 @@ void Detener()
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Detenido\n");
-    usleep(2000000);
+    delay();
 }
 
 void MoverAdelante()
@@ -529,14 +531,14 @@ void MoverAdelante()
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = ADELANTE;
     printf("Avanzando\n");
-    usleep(2000000);
+    delay();
 }
 
 int Observar()
 {
     int obs;
     printf("Observando\n");
-    usleep(2000000);
+    delay();
     obs = Ultrasonico_Trigger();
     if (obs)
     {
@@ -550,23 +552,23 @@ int Observar()
         printf("Distancia: %f\n", distancia);
         return 0;
     }
-    usleep(2000000);
+    delay();
 }
 
 void servoMirarDerecha()
 {
     printf("Girando servo a derecha\n");
-    usleep(2000000);
+    delay();
     printf("Servo girado a derecha\n");
-    usleep(2000000);
+    delay();
 }
 
 void servoMirarIzquierda()
 {
     printf("Girando servo a izquierda\n");
-    usleep(2000000);
+    delay();
     printf("Servo girado a izquierda\n");
-    usleep(2000000);
+    delay();
 }
 
 void motorGirarIzquierda()
@@ -575,12 +577,12 @@ void motorGirarIzquierda()
     printf("Girando robot a izquierda\n");
     movimientoRuedaIzquierda = ATRAS;
     movimientoRuedaDerecha = QUIETO;
-    //usleep(2000000);
+    //delay();
     contar_interrupciones_giro(cont);
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a izquierda\n");
-    usleep(2000000);
+    delay();
 }
 
 void motorGirarDerecha()
@@ -589,12 +591,12 @@ void motorGirarDerecha()
     printf("Girando robot a derecha\n");
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
-    //usleep(2000000);
+    //delay();
     contar_interrupciones_giro(cont);
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a derecha\n");
-    usleep(2000000);
+    delay();
 }
 
 void motorGirar180()
@@ -604,9 +606,9 @@ void motorGirar180()
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
     contar_interrupciones_giro(cont);
-    //usleep(2000000);
+    //delay();
     printf("Robot girado 180º\n");
-    usleep(2000000);
+    delay();
 }
 
 void contar_interrupciones_giro(int cont)
@@ -626,4 +628,51 @@ void contar_interrupciones_giro(int cont)
 
 void Secuencia_Inicio(void)
 {
+    int mayorDistancia;
+    char direccionMayorDistancia;
+
+    Observar();
+    distanciaCentro = distancia;
+    distancia = 0;
+    mayorDistancia = distanciaCentro;
+    direccionMayorDistancia = 'C';
+
+    servoMirarDerecha();
+    Observar();
+    distanciaDerecha = distancia;
+    distancia = 0;
+    if (distanciaDerecha > mayorDistancia)
+    {
+        mayorDistancia = distanciaDerecha;
+        direccionMayorDistancia = 'D';
+    }
+
+    servoMirarIzquierda();
+    Observar();
+    distanciaIzquierda = distancia;
+    distancia = 0;
+    if (distanciaIzquierda > mayorDistancia)
+    {
+        mayorDistancia = distanciaIzquierda;
+        direccionMayorDistancia = 'I';
+    }
+
+    switch (direccionMayorDistancia)
+    {
+    case 'C':
+        estadoActual = MOVIENDOSE;
+        break;
+
+    case 'D':
+        estadoActual = GIRANDO_DERECHA;
+        break;
+
+    case 'I':
+        estadoActual = GIRANDO_IZQUIERDA;
+        break;
+    }
+}
+
+void delay(void){
+    usleep(3000000);
 }
