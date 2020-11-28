@@ -8,7 +8,7 @@
 #define DIST_MIN 2
 #define DIST_MAX 4000
 
-#define INT_GIRO_90 900   //Cantidad de interrupciones para hacer un giro de 90 grados
+#define INT_GIRO_90 300   //Cantidad de interrupciones para hacer un giro de 90 grados
 #define INT_GIRO_180 1800 //Cantidad de interrupciones para hacer un giro de 180 grados
 
 // 56 ranuras por segundo => 571.8 mm/s
@@ -48,6 +48,7 @@ void MEF_Accion_Automatico();
 void Detener();
 void MoverAdelante();
 int Observar();
+void servoMirarCentro();
 void servoMirarDerecha();
 void servoMirarIzquierda();
 void motorGirarIzquierda();
@@ -57,8 +58,26 @@ void contar_interrupciones_giro(int cont);
 void Secuencia_Inicio(void);
 void delay(void);
 
-char direccion = 'C';
+// 0 -> lugar accesible, 1 -> obstáculo
+int habitacion[10][10] =
+    {
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        {1, 0, 0, 1, 1, 1, 1, 0, 0, 1},
+        {1, 0, 0, 1, 1, 1, 1, 0, 0, 1},
+        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+        {1, 0, 1, 1, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 1, 1, 0, 1},
+        {1, 1, 1, 1, 0, 0, 1, 1, 0, 1},
+        {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+    };
+int x = 1;
+int y = 1;
+int direccionServo = 0;
+int direccionRobot = 0; // Medimos en grados (0º, 90º, 180º, 270º)
 double distancia = 150;
+int distanciaMaxima;
 int encoderState_derecha = 0; //Indica el valor que devuelve el encoder derecho
 int encoderState_derecha_anterior = 0;
 int encoderState_izquierda = 0; //Indica el valor que devuelve el encoder izquierda
@@ -224,11 +243,13 @@ void MEF_Automatico()
                     {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_IZQUIERDA;
+                        distanciaMaxima = distanciaIzquierda;
                     }
                     else
                     {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_DERECHA;
+                        distanciaMaxima = distanciaDerecha;
                     }
                 }
                 else
@@ -268,11 +289,13 @@ void MEF_Automatico()
                     {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_DERECHA;
+                        distanciaMaxima = distanciaDerecha;
                     }
                     else
                     {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_IZQUIERDA;
+                        distanciaMaxima = distanciaIzquierda;
                     }
                 }
                 else
@@ -349,6 +372,8 @@ void MEF_Accion_Automatico()
     switch (estadoActual)
     {
     case MOVIENDOSE:
+        // Vuelve a colocar el servomotor al centro
+        servoMirarCentro();
         MoverAdelante();
         hayObstaculo = Observar();
         break;
@@ -362,11 +387,13 @@ void MEF_Accion_Automatico()
         //hayObstaculo = Observar();
         break;
     case MIRANDO_DERECHA:
+    printf("MIRANDO_DERECHA\n");
         servoMirarDerecha();
         hayObstaculo = Observar();
         flagServo = 1;
         break;
     case MIRANDO_IZQUIERDA:
+    printf("MIRANDO_IZQUIERDA\n");
         servoMirarIzquierda();
         hayObstaculo = Observar();
         flagServo = 1;
@@ -409,35 +436,73 @@ void MEF_Accion_Automatico()
 
 void *funcion_sensor_ultrasonido(void *ptr)
 {
+    // CON LAS POSICIONES X E Y Y LA DIRECCION, SABER IS HAY OBSTACULO O NO USANDO LA MATRIZ
+
     char *mensaje;
     mensaje = (char *)ptr;
-    //printf("%s \n", (char *)ptr);
 
     while (1)
     {
         if (trigger == 1)
         {
-            // Interpreta que todavía no se calculo la distancia en esta direccion
-            if (distancia == 0)
-            {
-                // Numero aleatorio en cm, con un decimal. En el rango de 2 a 4000mm
-                distancia = (double)((rand() % (DIST_MAX - DIST_MIN + 1)) + DIST_MIN) / 10;
-            }
-            // Interpreta que el auto se está moviendo y calculando la distancia
-            else
-            {
-                // Numero aleatorio en el rango de 2 al valor de distancia
-                distancia = (double)((rand() % ((int)distancia * 10 - DIST_MIN + 1)) + DIST_MIN) / 10;
-            }
 
-            //Esto comentado aca abajo es para forzar a que gire 180 grados
-            // if(estadoActual==MIRANDO_IZQUIERDA || estadoActual==MIRANDO_DERECHA){
-            //     distancia=8;
-            // }
-            // else{
-            //     distancia=100;
-            // }
-
+            // Utiliza la matrix que representa la habitación para calcular la distancia
+            int xAux = x;
+            int yAux = y;
+            printf("x: %d, y: %d \n",xAux,yAux);
+            int posicionesLibres = 0;
+            // Se hace una cuenta para calcular hacia que lugar de la matriz esta observando
+            int direccionTotal = (direccionRobot + direccionServo) % 360;
+            switch (direccionTotal)
+            {
+            // Se revisa cuantas posiciones hay en la matriz libres y se lo multiplica
+            // por 25 cm que es el tamaño que representa cada posicion de la matriz
+            // El sensor de ultrasonido alcanza como máximo 400cm (16 posiciones).
+            case 0:
+                // Esta observando  hacia derecha en la matriz
+                printf("0 GRADOS\n");
+                xAux++;
+                while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
+                {
+                    posicionesLibres++;
+                    xAux++;
+                }
+                break;
+            case 90:
+            printf("90 GRADOS\n");
+                // Esta observando hacia arriba en la matriz
+                yAux--;
+                while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
+                {
+                    posicionesLibres++;
+                    yAux--;
+                }
+                break;
+            case 180:
+            printf("180 GRADOS\n");
+                // Esta observando hacia izquierda en la matriz
+                xAux--;
+                while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
+                {
+                    posicionesLibres++;
+                    xAux--;
+                }
+                break;
+            case 270:
+            printf("270 GRADOS\n");
+                // Esta observando hacia abajo en la matriz
+                yAux++;
+                while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
+                {
+                    posicionesLibres++;
+                    yAux++;
+                }
+                break;
+            default:
+                break;
+            }
+            // Se calcula la distancia = posiciones libres de la matriz * 25 cm
+            distancia = posicionesLibres * 25;
             sem_post(&semaforoDistancia);
             trigger = 0;
         }
@@ -496,6 +561,34 @@ void MoverAdelante()
 {
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = ADELANTE;
+    int posiciones = distanciaMaxima / 25;
+
+    switch (direccionRobot)
+    {
+    case 0:
+        printf("CASO 0\n");
+        x = x + posiciones;
+        break;
+
+    case 90:
+    printf("CASO 90\n");
+        y = y - posiciones;
+        break;
+
+    case 180:
+    printf("CASO 180\n");
+        x = x - posiciones;
+        break;
+
+    case 270:
+    printf("CASO 270\n");
+        y = y + posiciones;
+        printf("x: %d, y: %d\n",x,y);
+        break;
+
+    default:
+        break;
+    }
     printf("Avanzando\n");
     delay();
 }
@@ -521,12 +614,22 @@ int Observar()
     delay();
 }
 
+void servoMirarCentro()
+{
+    printf("Girando servo al centro\n");
+    delay();
+    printf("Servo girado al centro\n");
+    delay();
+    direccionServo = 0;
+}
+
 void servoMirarDerecha()
 {
     printf("Girando servo a derecha\n");
     delay();
     printf("Servo girado a derecha\n");
     delay();
+    direccionServo = 270;
 }
 
 void servoMirarIzquierda()
@@ -535,6 +638,7 @@ void servoMirarIzquierda()
     delay();
     printf("Servo girado a izquierda\n");
     delay();
+    direccionServo = 90;
 }
 
 void motorGirarIzquierda()
@@ -548,6 +652,7 @@ void motorGirarIzquierda()
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a izquierda\n");
+    direccionRobot = (direccionRobot + 90) % 360;
     delay();
 }
 
@@ -562,6 +667,7 @@ void motorGirarDerecha()
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a derecha\n");
+    direccionRobot = (direccionRobot + 270) % 360;
     delay();
 }
 
@@ -574,6 +680,7 @@ void motorGirar180()
     contar_interrupciones_giro(cont);
     //delay();
     printf("Robot girado 180º\n");
+    direccionRobot = (direccionRobot + 180) % 360;
     delay();
 }
 
@@ -594,22 +701,21 @@ void contar_interrupciones_giro(int cont)
 
 void Secuencia_Inicio(void)
 {
-    int mayorDistancia;
     char direccionMayorDistancia;
 
     Observar();
     distanciaCentro = distancia;
     distancia = 0;
-    mayorDistancia = distanciaCentro;
+    distanciaMaxima = distanciaCentro;
     direccionMayorDistancia = 'C';
 
     servoMirarDerecha();
     Observar();
     distanciaDerecha = distancia;
     distancia = 0;
-    if (distanciaDerecha > mayorDistancia)
+    if (distanciaDerecha > distanciaMaxima)
     {
-        mayorDistancia = distanciaDerecha;
+        distanciaMaxima = distanciaDerecha;
         direccionMayorDistancia = 'D';
     }
 
@@ -617,9 +723,9 @@ void Secuencia_Inicio(void)
     Observar();
     distanciaIzquierda = distancia;
     distancia = 0;
-    if (distanciaIzquierda > mayorDistancia)
+    if (distanciaIzquierda > distanciaMaxima)
     {
-        mayorDistancia = distanciaIzquierda;
+        distanciaMaxima = distanciaIzquierda;
         direccionMayorDistancia = 'I';
     }
 
@@ -639,6 +745,7 @@ void Secuencia_Inicio(void)
     }
 }
 
-void delay(void){
+void delay(void)
+{
     usleep(3000000);
 }
