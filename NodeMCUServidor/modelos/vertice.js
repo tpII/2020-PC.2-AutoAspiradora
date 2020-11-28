@@ -1,24 +1,30 @@
 const sequelizeCon = require('../database/config.js');
 const { Sequelize, DataTypes, Model } = require('sequelize');
 
-const Vertice = sequelizeCon.define('experimento', {
-    nombre: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-    },
-    descripcion: {
-        type: DataTypes.STRING
-    },
-    activo: { // Activo o Finalizado
-        type: DataTypes.BOOLEAN,
+const Vertice = sequelizeCon.define('vertice', {
+    x: {
+        type: DataTypes.INTEGER,
         allowNull: false
     },
-    correoCreador: {
-        type: DataTypes.STRING,
+    y: {
+        type: DataTypes.INTEGER,
         allowNull: false
+    },
+    visitado:{
+        type: DataTypes.INTEGER
     }
 });
 
-Vertice.hasMany(Vertice);
+// Vertice.hasMany(Vertice, {
+//     as:'adyacentes',
+//     foreignKey:"adyacenteID"
+// });
+
+// Vertice.belongsTo(Vertice);
+
+Vertice.belongsToMany(Vertice, {as:'adyacentes', through: 'Adyacentes' });
+
+// Vertice.hasOne(Vertice, {
+//     as:'siguiente'
+// })
 module.exports = Vertice;
