@@ -1,5 +1,5 @@
-#ifndef COMUNICACION_SIMULACION_SERVIDOR_H
-#define COMUNICACION_SIMULACION_SERVIDOR_H
+#ifndef __COMUNICACION_SIMULACION_SERVIDOR_H__
+#define __COMUNICACION_SIMULACION_SERVIDOR_H__
 
 typedef struct datos_recorrido{
     float obstaculo_x;

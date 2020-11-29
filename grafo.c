@@ -1,63 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "include/grafo.h"
 // Se usa la implementacion de lista de adyacentes
 
-// typedef struct nodoAdyentes {
-//     int visitado; // 1 true, 0 false
-//     int x;
-//     int y;
-//     nodoAdyacentes* proximo;
-// } as nodoAdyacentes;
-
-typedef enum Direccion
-{
-    Arriba,
-    Derecha,
-    Abajo,
-    Izquierda
-} direccion;
-
-typedef enum EstadoNodo
-{
-    Visitado,
-    NoVisitado,
-    Inaccesible
-} estadoNodo;
-
-typedef struct vertice
-{
-    estadoNodo visitado; // 1 true, 0 false, -1 obstaculo
-    int x;
-    int y;
-} vertice;
-
-typedef struct nodo
-{
-    vertice actual;
-    struct nodo *adyacentes[4];
-    struct nodo *proximo;
-} nodo;
-
-typedef struct lista
-{
-    nodo *cabeza;
-    nodo *cola;
-} listaVertices;
-
-typedef struct grafo
-{
-    // int vertices;
-    listaVertices lista;
-} grafo;
-
-nodo* agregar_vertice(grafo *grafo, vertice actual)
+nodo *agregar_vertice(grafo *grafo, vertice actual)
 {
     int i;
 
     nodo *nuevoNodo = (nodo *)malloc(sizeof(nodo));
     nuevoNodo->actual = actual;
     // Se inicializan en NULL los 4 nodos adyacentes
-    for(i=0; i<4; i++){
+    for (i = 0; i < 4; i++)
+    {
         nuevoNodo->adyacentes[i] = NULL;
     }
     nuevoNodo->proximo = NULL;
@@ -82,20 +36,20 @@ void agregar_adyacente(nodo *actual, nodo *destino, direccion dirDestino)
     // Se agrega el nodo actual como adyacente del nodo destino
     switch (dirDestino)
     {
-        case Arriba:
-            destino->adyacentes[Abajo] = actual;
-            break;
-        case Abajo:
-            destino->adyacentes[Arriba] = actual;
-            break;
-        case Derecha:
-            destino->adyacentes[Izquierda] = actual;
-            break;
-        case Izquierda:
-            destino->adyacentes[Derecha] = actual;
-            break;
-        default:
-            break;
+    case Arriba:
+        destino->adyacentes[Abajo] = actual;
+        break;
+    case Abajo:
+        destino->adyacentes[Arriba] = actual;
+        break;
+    case Derecha:
+        destino->adyacentes[Izquierda] = actual;
+        break;
+    case Izquierda:
+        destino->adyacentes[Derecha] = actual;
+        break;
+    default:
+        break;
     }
 }
 
@@ -105,43 +59,63 @@ void inicializar_grafo(grafo *grafo)
     grafo->lista.cabeza = grafo->lista.cola;
 }
 
-void main()
+void imprimir_grafo(grafo grafo)
 {
-    nodo *nodoAux;;
-    grafo grafo;
-
     int i;
-    
-    nodo *verticeActual;
-    nodo *verticeProximo;
-    inicializar_grafo(&grafo);
-    vertice actual;
-    actual.x = 0;
-    actual.y = 0;
-    actual.visitado = Visitado;
-  
-    verticeActual = agregar_vertice(&grafo, actual);
 
-    vertice proximo;
-    proximo.x = 1;
-    proximo.y = 0;
-    proximo.visitado = NoVisitado;
-
-    verticeProximo = agregar_vertice(&grafo, proximo);
-
-    agregar_adyacente(verticeActual, verticeProximo, Derecha);
-
-    nodoAux=grafo.lista.cabeza;
-    while(nodoAux!=NULL){
-        printf("\n x: %d y: %d |",nodoAux->actual.x,nodoAux->actual.y);
-        for(i=0; i<4; i++){
-            if(nodoAux->adyacentes[i] != NULL){
-                printf("-> x: %d y: %d", nodoAux->adyacentes[i]->actual.x, nodoAux->adyacentes[i]->actual.y);
+    while (grafo.lista.cabeza != NULL)
+    {
+        printf("\n x: %d y: %d |", grafo.lista.cabeza->actual.coordenadas.x, grafo.lista.cabeza->actual.coordenadas.y);
+        for (i = 0; i < 4; i++)
+        {
+            if (grafo.lista.cabeza->adyacentes[i] != NULL)
+            {
+                printf("-> x: %d y: %d", grafo.lista.cabeza->adyacentes[i]->actual.coordenadas.x, grafo.lista.cabeza->adyacentes[i]->actual.coordenadas.y);
             }
         }
-         nodoAux = nodoAux->proximo;
+        grafo.lista.cabeza = grafo.lista.cabeza->proximo;
     }
+
+    printf("\n");
 }
+
+// void main()
+// {
+//     nodo *nodoAux;;
+//     grafo grafo;
+
+//     int i;
+
+//     nodo *verticeActual;
+//     nodo *verticeProximo;
+//     inicializar_grafo(&grafo);
+//     vertice actual;
+//     actual.coordenadas.x = 0;
+//     actual.coordenadas.y = 0;
+//     actual.estado = Visitado;
+
+//     verticeActual = agregar_vertice(&grafo, actual);
+
+//     vertice proximo;
+//     proximo.coordenadas.x = 1;
+//     proximo.coordenadas.y = 0;
+//     proximo.estado = NoVisitado;
+
+//     verticeProximo = agregar_vertice(&grafo, proximo);
+
+//     agregar_adyacente(verticeActual, verticeProximo, Derecha);
+
+//     nodoAux=grafo.lista.cabeza;
+//     while(nodoAux!=NULL){
+//         printf("\n x: %d y: %d |",nodoAux->actual.coordenadas.x,nodoAux->actual.coordenadas.y);
+//         for(i=0; i<4; i++){
+//             if(nodoAux->adyacentes[i] != NULL){
+//                 printf("-> x: %d y: %d", nodoAux->adyacentes[i]->actual.coordenadas.x, nodoAux->adyacentes[i]->actual.coordenadas.y);
+//             }
+//         }
+//          nodoAux = nodoAux->proximo;
+//     }
+// }
 
 // buscarDireccionOptima();
 // posicionarse()
@@ -156,4 +130,3 @@ void main()
 //             avanzo(direccionOptima);
 //     }
 // }
-
