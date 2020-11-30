@@ -10,6 +10,7 @@
 
 #define INT_GIRO_90 300   //Cantidad de interrupciones para hacer un giro de 90 grados
 #define INT_GIRO_180 1800 //Cantidad de interrupciones para hacer un giro de 180 grados
+#define INT_AVANZAR_POSICION 23 //Cantidad de interruciones para avanzar 22 cm
 
 // 56 ranuras por segundo => 571.8 mm/s
 
@@ -47,6 +48,7 @@ void MEF_Accion_Automatico();
 
 void Detener();
 void MoverAdelante();
+void MoverPosicion();
 int Observar();
 void servoMirarCentro();
 void servoMirarDerecha();
@@ -54,7 +56,7 @@ void servoMirarIzquierda();
 void motorGirarIzquierda();
 void motorGirarDerecha();
 void motorGirar180();
-void contar_interrupciones_giro(int cont);
+void contar_interrupciones(int cont);
 void Secuencia_Inicio(void);
 void delay(void);
 
@@ -89,7 +91,7 @@ int distanciaDerecha;   //Distancia medida por el ultrasonico a la derecha
 int distanciaIzquierda; //Distancia medida por el ultrasonico a la izquierda
 int distanciaCentro;    //Distancia medida por el ultrasonico al centro
 int hayObstaculo180;    //Indica si hay obstaculo luego de hacer un giro de 180 grados
-
+int posiciones;
 int contPrueba;
 
 movimiento movimientoRuedaDerecha = ATRAS;
@@ -198,8 +200,9 @@ void MEF_Automatico()
     {
     case MOVIENDOSE:
         //printf("Estado: Moviendose, obstaculo=%d\n", hayObstaculo);
-        if (hayObstaculo)
+        if ((posiciones==0) || (hayObstaculo))
         {
+            distanciaMaxima = 0;
             estadoAnterior = estadoActual;
             estadoActual = ESQUIVANDO;
         }
@@ -244,16 +247,19 @@ void MEF_Automatico()
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_IZQUIERDA;
                         distanciaMaxima = distanciaIzquierda;
+                        posiciones = distanciaMaxima / 25;
                     }
                     else
                     {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_DERECHA;
                         distanciaMaxima = distanciaDerecha;
+                        posiciones = distanciaMaxima / 25;
                     }
                 }
                 else
                 {
+                    distanciaMaxima = distanciaDerecha;
                     estadoAnterior = estadoActual;
                     estadoActual = MIRANDO_IZQUIERDA;
                 }
@@ -290,16 +296,19 @@ void MEF_Automatico()
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_DERECHA;
                         distanciaMaxima = distanciaDerecha;
+                        posiciones = distanciaMaxima / 25;
                     }
                     else
                     {
                         estadoAnterior = estadoActual;
                         estadoActual = GIRANDO_IZQUIERDA;
                         distanciaMaxima = distanciaIzquierda;
+                        posiciones = distanciaMaxima / 25;
                     }
                 }
                 else
                 {
+                    distanciaMaxima = distanciaIzquierda;
                     estadoAnterior = estadoActual;
                     estadoActual = MIRANDO_DERECHA;
                 }
@@ -372,9 +381,8 @@ void MEF_Accion_Automatico()
     switch (estadoActual)
     {
     case MOVIENDOSE:
-        // Vuelve a colocar el servomotor al centro
-        servoMirarCentro();
         MoverAdelante();
+        posiciones--;
         hayObstaculo = Observar();
         break;
     case BARRIDO:
@@ -390,12 +398,16 @@ void MEF_Accion_Automatico()
     printf("MIRANDO_DERECHA\n");
         servoMirarDerecha();
         hayObstaculo = Observar();
+        // Vuelve a colocar el servomotor al centro
+        servoMirarCentro();
         flagServo = 1;
         break;
     case MIRANDO_IZQUIERDA:
     printf("MIRANDO_IZQUIERDA\n");
         servoMirarIzquierda();
         hayObstaculo = Observar();
+        // Vuelve a colocar el servomotor al centro
+        servoMirarCentro();
         flagServo = 1;
         break;
     case GIRANDO_IZQUIERDA:
@@ -561,35 +573,52 @@ void MoverAdelante()
 {
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = ADELANTE;
-    int posiciones = distanciaMaxima / 25;
+    
 
     switch (direccionRobot)
     {
     case 0:
         printf("CASO 0\n");
-        x = x + posiciones;
+        x++;
+        MoverPosicion();
         break;
 
     case 90:
-    printf("CASO 90\n");
-        y = y - posiciones;
+        printf("CASO 90\n");
+        y--;
+        MoverPosicion();
         break;
 
     case 180:
-    printf("CASO 180\n");
-        x = x - posiciones;
+        printf("CASO 180\n");
+        x--;
+        MoverPosicion();
         break;
 
     case 270:
-    printf("CASO 270\n");
-        y = y + posiciones;
-        printf("x: %d, y: %d\n",x,y);
+        printf("CASO 270\n");
+        y++;
+        MoverPosicion();
         break;
 
     default:
         break;
     }
     printf("Avanzando\n");
+    delay();
+}
+
+void MoverPosicion(){
+    int cont = INT_AVANZAR_POSICION;
+
+    movimientoRuedaIzquierda = ADELANTE;
+    movimientoRuedaDerecha = ADELANTE;
+    //delay();
+    contar_interrupciones(cont);
+
+    // Se crea el nodo en el grafo
+
+    printf("El robot avanzó una posicion\n");
     delay();
 }
 
@@ -648,7 +677,7 @@ void motorGirarIzquierda()
     movimientoRuedaIzquierda = ATRAS;
     movimientoRuedaDerecha = QUIETO;
     //delay();
-    contar_interrupciones_giro(cont);
+    contar_interrupciones(cont);
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a izquierda\n");
@@ -663,7 +692,7 @@ void motorGirarDerecha()
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
     //delay();
-    contar_interrupciones_giro(cont);
+    contar_interrupciones(cont);
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
     printf("Robot girado a derecha\n");
@@ -677,14 +706,14 @@ void motorGirar180()
     int cont = INT_GIRO_180;
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
-    contar_interrupciones_giro(cont);
+    contar_interrupciones(cont);
     //delay();
     printf("Robot girado 180º\n");
     direccionRobot = (direccionRobot + 180) % 360;
     delay();
 }
 
-void contar_interrupciones_giro(int cont)
+void contar_interrupciones(int cont)
 {
     while (cont != 0)
     {
@@ -743,6 +772,7 @@ void Secuencia_Inicio(void)
         estadoActual = GIRANDO_IZQUIERDA;
         break;
     }
+    servoMirarCentro();
 }
 
 void delay(void)
