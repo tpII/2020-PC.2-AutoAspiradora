@@ -59,6 +59,36 @@ void inicializar_grafo(grafo *grafo)
     grafo->lista.cabeza = grafo->lista.cola;
 }
 
+void buscar_y_agregar_adyacentes(nodo *vertice, grafo grafo)
+{
+    int x = vertice->actual.coordenadas.x;
+    int y = vertice->actual.coordenadas.y;
+    nodo *listaVertices = grafo.lista.cabeza;
+
+    // Se buscan y agregan todos los adyacentes que existan en el grafo
+    while(listaVertices != NULL){
+        if(listaVertices->actual.coordenadas.x == x){
+            if(listaVertices->actual.coordenadas.y == (y + 1)){
+                agregar_adyacente(vertice,listaVertices,Abajo);
+            }
+            else if(listaVertices->actual.coordenadas.y == (y - 1))
+            {
+                agregar_adyacente(vertice,listaVertices,Arriba);
+            }
+        }
+        else if(listaVertices->actual.coordenadas.y == y){
+            if(listaVertices->actual.coordenadas.x == (x + 1)){
+                agregar_adyacente(vertice,listaVertices,Derecha);
+            }
+            else if(listaVertices->actual.coordenadas.x == (x - 1))
+            {
+                agregar_adyacente(vertice,listaVertices,Izquierda);
+            }
+        }
+        listaVertices = listaVertices->proximo;
+    }
+}
+
 void imprimir_grafo(grafo grafo)
 {
     int i;

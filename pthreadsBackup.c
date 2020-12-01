@@ -39,7 +39,8 @@ typedef enum
     MIRANDO_DERECHA,
     GIRANDO_DERECHA,
     GIRANDO_IZQUIERDA,
-    GIRANDO_180
+    GIRANDO_180,
+    REGRESANDO
 } estado_automatico;
 
 void MEF_Modo_Aspiradora();
@@ -72,7 +73,7 @@ int habitacion[10][10] =
         {1, 0, 0, 1, 1, 1, 1, 0, 0, 1},
         {1, 0, 0, 1, 1, 1, 1, 0, 0, 1},
         {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+        {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
         {1, 0, 1, 1, 0, 0, 0, 0, 0, 1},
         {1, 0, 1, 0, 0, 0, 1, 1, 0, 1},
         {1, 1, 1, 1, 0, 0, 1, 1, 0, 1},
@@ -103,6 +104,7 @@ movimiento movimientoRuedaIzquierda = ADELANTE;
 
 //Variables de las maquinas de estado
 int hayObstaculo;
+int yaVisitado;
 estado_automatico estadoAnterior;
 estado_automatico estadoActual;
 estado_automatico estadoActualModo;
@@ -190,7 +192,7 @@ void MEF_Automatico()
     switch (estadoActual)
     {
     case MOVIENDOSE:
-        if ((posiciones == 0) || (hayObstaculo))
+        if ((posiciones == 0) || (hayObstaculo) || (yaVisitado))
         {
             distanciaMaxima = 0;
             estadoAnterior = estadoActual;
@@ -215,8 +217,11 @@ void MEF_Automatico()
         // printf("Estado: Esquivando\n");
         distancia = 0;
         estadoAnterior = estadoActual;
-        if (hayObstaculo)
+        if ((hayObstaculo) || (yaVisitado))
+        {
             estadoActual = BARRIDO;
+            yaVisitado = 0;
+        }
         else
             estadoActual = MOVIENDOSE;
 
@@ -232,13 +237,31 @@ void MEF_Automatico()
             {
                 if (estadoAnterior == MIRANDO_IZQUIERDA)
                 {
-                    if ((distanciaIzquierda > 10) && (distanciaDerecha < distanciaIzquierda))
+                    if (distanciaIzquierda > 10)
+                    {
+                        if (distanciaIzquierda > distanciaDerecha)
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = GIRANDO_IZQUIERDA;
+                            distanciaMaxima = distanciaIzquierda;
+                            posiciones = distanciaMaxima / 25;
+                        }
+                        else
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = GIRANDO_DERECHA;
+                            distanciaMaxima = distanciaDerecha;
+                            posiciones = distanciaMaxima / 25;
+                        }
+                    }
+                    // Si en la izquierda hay obstáculo y el vertice a la derecha ya se visito
+                    // Regresa al aterior
+                    else if (yaVisitado)
                     {
                         estadoAnterior = estadoActual;
-                        estadoActual = GIRANDO_IZQUIERDA;
-                        distanciaMaxima = distanciaIzquierda;
-                        posiciones = distanciaMaxima / 25;
+                        estadoActual = REGRESANDO;
                     }
+                    // Si no esta visitado y a la izquierda hay obstaculo
                     else
                     {
                         estadoAnterior = estadoActual;
@@ -247,9 +270,20 @@ void MEF_Automatico()
                         posiciones = distanciaMaxima / 25;
                     }
                 }
+                // Todavía no se miro a izquierda
                 else
                 {
-                    distanciaMaxima = distanciaDerecha;
+                    // Si el vertice a derecha esta visitado, se coloca distancia en 0 para
+                    // que no acceda
+                    if (yaVisitado)
+                    {
+                        distanciaDerecha = 0;
+                        distanciaMaxima = 0;
+                    }
+                    else
+                    {
+                        distanciaMaxima = distanciaDerecha;
+                    }
                     estadoAnterior = estadoActual;
                     estadoActual = MIRANDO_IZQUIERDA;
                 }
@@ -271,8 +305,16 @@ void MEF_Automatico()
                     }
                     else
                     {
-                        estadoAnterior = estadoActual;
-                        estadoActual = GIRANDO_180;
+                        if (distanciaCentro > 10)
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = REGRESANDO;
+                        }
+                        else
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = GIRANDO_180;
+                        }
                     }
                 }
             }
@@ -290,13 +332,31 @@ void MEF_Automatico()
             {
                 if (estadoAnterior == MIRANDO_DERECHA)
                 {
-                    if ((distanciaDerecha > 10) && (distanciaIzquierda < distanciaDerecha))
+                    if (distanciaDerecha > 10)
+                    {
+                        if (distanciaIzquierda < distanciaDerecha)
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = GIRANDO_DERECHA;
+                            distanciaMaxima = distanciaDerecha;
+                            posiciones = distanciaMaxima / 25;
+                        }
+                        else
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = GIRANDO_IZQUIERDA;
+                            distanciaMaxima = distanciaIzquierda;
+                            posiciones = distanciaMaxima / 25;
+                        }
+                    }
+                    // Si en la derecha hay obstáculo y el vertice a la izquierda ya se visito
+                    // Regresa al aterior
+                    else if (yaVisitado)
                     {
                         estadoAnterior = estadoActual;
-                        estadoActual = GIRANDO_DERECHA;
-                        distanciaMaxima = distanciaDerecha;
-                        posiciones = distanciaMaxima / 25;
+                        estadoActual = REGRESANDO;
                     }
+                     // Si no esta visitado y a la derecha hay obstaculo
                     else
                     {
                         estadoAnterior = estadoActual;
@@ -307,7 +367,15 @@ void MEF_Automatico()
                 }
                 else
                 {
-                    distanciaMaxima = distanciaIzquierda;
+                    if (yaVisitado)
+                    {
+                        // Se coloca distancia maxima en 0 para que no gire a un vertice ya visitado
+                        distanciaMaxima = 0;
+                    }
+                    else
+                    {
+                        distanciaMaxima = distanciaIzquierda;
+                    }
                     estadoAnterior = estadoActual;
                     estadoActual = MIRANDO_DERECHA;
                 }
@@ -330,8 +398,16 @@ void MEF_Automatico()
                     }
                     else
                     {
-                        estadoAnterior = estadoActual;
-                        estadoActual = GIRANDO_180;
+                        if (distanciaCentro > 10)
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = REGRESANDO;
+                        }
+                        else
+                        {
+                            estadoAnterior = estadoActual;
+                            estadoActual = GIRANDO_180;
+                        }
                     }
                 }
             }
@@ -363,6 +439,10 @@ void MEF_Automatico()
                 estadoActual = MOVIENDOSE;
             }
         }
+        break;
+    case REGRESANDO:
+        estadoAnterior = estadoActual;
+        estadoActual = MOVIENDOSE;
         break;
     default:
         break;
@@ -398,19 +478,34 @@ void MEF_Accion_Automatico(nodo *actual)
         posiciones--;
         actual->actual.estado = Visitado;
         hayObstaculo = Observar();
+        distanciaCentro = distancia;
         if (!hayObstaculo)
         {
-            if(actual->adyacentes[direccionAdyacente()] != NULL){
-                if(actual->adyacentes[direccionAdyacente()]->actual.estado != Visitado){
+            if (actual->adyacentes[direccionAdyacente()] != NULL)
+            {
+                // if(actual->adyacentes[direccionAdyacente()]->actual.estado != Visitado){
+                //     proximo = actual->adyacentes[direccionAdyacente()];
+                // }
+                if (actual->adyacentes[direccionAdyacente()]->actual.estado == Visitado)
+                {
+                    printf("ESTE NODO YA SE VISITO\n");
+                    yaVisitado = 1;
                     proximo = actual;
                 }
+                else
+                {
+                    proximo = actual->adyacentes[direccionAdyacente()];
+                }
             }
-            else{
+            else
+            {
+                yaVisitado = 0;
                 proximo = crearVertice(actual);
             }
         }
         else
         {
+            crearVertice(actual);
             proximo = actual;
         }
 
@@ -433,13 +528,23 @@ void MEF_Accion_Automatico(nodo *actual)
         // Solo crea el vertice si hay obstáculo, si no se crea cuando se mueve
         if (hayObstaculo)
         {
-            printf("debug if\n");
-
             crearVertice(actual);
             proximo = actual;
         }
         else
         {
+            // Si el vertice ya existe y esta visitado se activa el flag 'ya visitado'
+            if (actual->adyacentes[direccionAdyacente()] != NULL)
+            {
+                if (actual->adyacentes[direccionAdyacente()]->actual.estado == Visitado)
+                {
+                    yaVisitado = 1;
+                }
+            }
+            else
+            {
+                yaVisitado = 0;
+            }
             proximo = actual;
         }
         // Vuelve a colocar el servomotor al centro
@@ -458,6 +563,18 @@ void MEF_Accion_Automatico(nodo *actual)
         }
         else
         {
+            // Si el vertice ya existe y esta visitado se activa el flag 'ya visitado'
+            if (actual->adyacentes[direccionAdyacente()] != NULL)
+            {
+                if (actual->adyacentes[direccionAdyacente()]->actual.estado == Visitado)
+                {
+                    yaVisitado = 1;
+                }
+            }
+            else
+            {
+                yaVisitado = 0;
+            }
             proximo = actual;
         }
         // Vuelve a colocar el servomotor al centro
@@ -504,6 +621,9 @@ void MEF_Accion_Automatico(nodo *actual)
         // Detener();
 
         break;
+    case REGRESANDO:
+        proximo = actual->adyacentes[direccionAdyacente()];
+        yaVisitado = 0;
     default:
         break;
     }
@@ -539,6 +659,7 @@ void *funcion_sensor_ultrasonido(void *ptr)
             int posicionesLibres = 0;
             // Se hace una cuenta para calcular hacia que lugar de la matriz esta observando
             int direccionTotal = (direccionRobot + direccionServo) % 360;
+            printf("DIRECCION A DONDE SE MEDIRA LA DISTANCIA: %d\n", direccionTotal);
             switch (direccionTotal)
             {
             // Se revisa cuantas posiciones hay en la matriz libres y se lo multiplica
@@ -927,10 +1048,13 @@ direccion direccionAdyacente()
 
 nodo *crearVertice(nodo *actual)
 {
+    int i;
+    int j;
     vertice v;
     nodo *adyacente;
     // Se crea el proximo vertice
     v.coordenadas = coordenadasAyacente(x, y);
+    printf("coordenadas del vertice a crear x: %d y: %d\n", v.coordenadas.x, v.coordenadas.y);
     if (hayObstaculo)
     {
         v.estado = Inaccesible;
@@ -940,15 +1064,20 @@ nodo *crearVertice(nodo *actual)
         v.estado = NoVisitado;
     }
 
-    if (!(actual->adyacentes[direccionAdyacente()]))
+    if ((actual->adyacentes[direccionAdyacente()]) == NULL)
     {
+        printf("CREA EL ADYACENTE Y LOS LINKEA\n");
         // Se agrega al grafo
         adyacente = agregar_vertice(&grafoMapa, v);
-        // Se agregan como vertices adyacentes bidireccionalmente con el vertice actual
-        agregar_adyacente(actual, adyacente, direccionAdyacente());
+        // Se buscan todos los vertices adyacentes al vertice creado, que ya existan
+        buscar_y_agregar_adyacentes(adyacente, grafoMapa);
     }
-    else{
+    else
+    {
+        int dir = direccionAdyacente();
+        printf("DIRECCION DEL ADYACENTE: %d", dir);
         adyacente = actual->adyacentes[direccionAdyacente()];
+        printf("Coord del adyacente: x: %d, y: %d", adyacente->actual.coordenadas.x, adyacente->actual.coordenadas.y);
     }
 
     return adyacente;
