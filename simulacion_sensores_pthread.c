@@ -852,8 +852,8 @@ direccion direccionAdyacente(){
     return direccion;
 }
 
-void recursion(int distanciaMaxima, int distanciaCentro, int distanciaIzquierda, int distanciaDerecha,int x, int y){
-    MEF_Modo_Aspiradora();
-    MEF_Accion_Modo();
-    recursion();
-}
+// void recursion(int distanciaMaxima, int distanciaCentro, int distanciaIzquierda, int distanciaDerecha,int x, int y){
+//     MEF_Modo_Aspiradora();
+//     MEF_Accion_Modo();
+//     recursion();
+// }

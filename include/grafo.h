@@ -54,5 +54,6 @@ void inicializar_grafo(grafo *grafo);
 nodo* agregar_vertice(grafo *grafo, vertice actual);
 void agregar_adyacente(nodo *actual, nodo *destino, direccion dirDestino);
 void imprimir_grafo(grafo grafo);
+void buscar_y_agregar_adyacentes(nodo *vertice, grafo grafo);
 
 #endif
