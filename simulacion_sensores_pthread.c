@@ -10,7 +10,7 @@
 #define DIST_MAX 4000
 
 #define INT_GIRO_90 300         //Cantidad de interrupciones para hacer un giro de 90 grados
-#define INT_GIRO_180 1800       //Cantidad de interrupciones para hacer un giro de 180 grados
+#define INT_GIRO_180 300        //Cantidad de interrupciones para hacer un giro de 180 grados
 #define INT_AVANZAR_POSICION 23 //Cantidad de interruciones para avanzar 22 cm
 
 // 56 ranuras por segundo => 571.8 mm/s
@@ -18,7 +18,6 @@
 void *funcion_sensor_ultrasonido(void *ptr);
 void *funcion_sensor_encoder_derecha(void *ptr);
 void *funcion_sensor_encoder_izquierda(void *ptr);
-
 
 typedef enum
 {
@@ -45,9 +44,9 @@ typedef enum
 
 void MEF_Modo_Aspiradora();
 void MEF_Automatico();
-void MEF_Accion_Modo();
-void MEF_Accion_Automatico();
-void recursion();
+nodo *MEF_Accion_Modo(nodo *);
+nodo *MEF_Accion_Automatico(nodo *);
+
 void Detener();
 void MoverAdelante();
 void MoverPosicion();
@@ -59,32 +58,35 @@ void motorGirarIzquierda();
 void motorGirarDerecha();
 void motorGirar180();
 void contar_interrupciones(int cont);
-void Secuencia_Inicio(int x_pos, int y_pos);
+nodo *Secuencia_Inicio(void);
+nodo *crearVertice(nodo *);
 void delay(void);
 coordenadas coordenadasAyacente(int, int);
 direccion direccionAdyacente();
+direccion direccionAdyacenteAnterior();
+void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior);
+void recursion(nodo *actual, nodo *anterior);
 
 // Matriz que representa la habitación
 // 0 -> lugar accesible, 1 -> obstáculo
 int habitacion[10][10] =
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 0, 0, 1, 1, 1, 1, 0, 0, 1},
-        {1, 0, 0, 1, 1, 1, 1, 0, 0, 1},
-        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-        {1, 0, 1, 1, 0, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 1, 1, 0, 1},
+        {1, 0, 1, 1, 1, 1, 1, 0, 0, 1},
+        {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
+        {1, 0, 1, 0, 1, 1, 1, 0, 0, 1},
+        {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
+        {1, 1, 1, 1, 1, 0, 0, 0, 0, 1},
+        {1, 0, 1, 0, 0, 0, 1, 1, 0, 1},
         {1, 1, 1, 1, 0, 0, 1, 1, 0, 1},
         {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
-
 int x = 1;
 int y = 1;
 int direccionServo = 0;
 int direccionRobot = 0; // Medimos en grados (0º, 90º, 180º, 270º)
 double distancia = 150;
-//int distanciaMaxima;
+int distanciaMaxima;
 int encoderState_derecha = 0; //Indica el valor que devuelve el encoder derecho
 int encoderState_derecha_anterior = 0;
 int encoderState_izquierda = 0; //Indica el valor que devuelve el encoder izquierda
@@ -92,12 +94,13 @@ int encoderState_izquierda_anterior = 0;
 int robotEncendido = 0; //Booleano
 int trigger = 0;        //triger del ultrasonido
 int echo;               //echo del ultrasonido
-// int distanciaDerecha;   //Distancia medida por el ultrasonico a la derecha
-// int distanciaIzquierda; //Distancia medida por el ultrasonico a la izquierda
-// int distanciaCentro;    //Distancia medida por el ultrasonico al centro
+int distanciaDerecha;   //Distancia medida por el ultrasonico a la derecha
+int distanciaIzquierda; //Distancia medida por el ultrasonico a la izquierda
+int distanciaCentro;    //Distancia medida por el ultrasonico al centro
 int hayObstaculo180;    //Indica si hay obstaculo luego de hacer un giro de 180 grados
 int posiciones;
 int contPrueba;
+int retornando;
 
 movimiento movimientoRuedaDerecha = ATRAS;
 movimiento movimientoRuedaIzquierda = ADELANTE;
@@ -133,12 +136,7 @@ int Ultrasonico_Trigger(void)
 grafo grafoMapa;
 void main()
 {
-    int pos_x;
-    int pos_y;
-    int distanciaMaxima;
-    int distanciaDerecha;   //Distancia medida por el ultrasonico a la derecha
-    int distanciaIzquierda; //Distancia medida por el ultrasonico a la izquierda
-    int distanciaCentro;    //Distancia medida por el ultrasonico al centro
+
     int ret = 0;
 
     srand(time(NULL));
@@ -168,10 +166,13 @@ void main()
     // pthread_join(ultrasonido, NULL);
     // pthread_join(ruedaDer, NULL);
     // pthread_join(ruedaIzq, NULL);
-    Secuencia_Inicio(pos_x,pos_y);
+    nodo *inicial = Secuencia_Inicio();
     // while (1)
     // {
-    recursion();
+    recursion(inicial, NULL);
+    printf("Mapeado de la habitación finalizado\n");
+    // MEF_Modo_Aspiradora();
+    // MEF_Accion_Modo(inicial);
     //}
     //printf("SE ALCANZO EL OBSTÁCULO \n");
 }
@@ -354,6 +355,7 @@ void MEF_Automatico()
         }
         break;
     case GIRANDO_180:
+        retornando = 1;
         if (flagMotor)
         {
             flagMotor = 0;
@@ -364,8 +366,9 @@ void MEF_Automatico()
             }
             else
             {
-                    estadoAnterior = estadoActual;
-                    estadoActual = MOVIENDOSE;
+                estadoAnterior = estadoActual;
+                //estadoActual = MOVIENDOSE;
+                estadoActual = 40;
             }
         }
         break;
@@ -374,7 +377,7 @@ void MEF_Automatico()
     }
 }
 
-void MEF_Accion_Modo()
+nodo *MEF_Accion_Modo(nodo *inicial)
 {
     switch (estadoActualModo)
     {
@@ -383,36 +386,53 @@ void MEF_Accion_Modo()
         Detener();
         break;
     case AUTOMATICO:
-        MEF_Accion_Automatico();
+        return MEF_Accion_Automatico(inicial);
         break;
     default:
         break;
     }
 }
 
-void MEF_Accion_Automatico()
+nodo *MEF_Accion_Automatico(nodo *actual)
 {
+    vertice v;
+    nodo *proximo = NULL;
+    int posiblesCaminos = 4;
 
     switch (estadoActual)
     {
     case MOVIENDOSE:
         MoverAdelante();
         posiciones--;
-        hayObstaculo = Observar();
+        actual->actual.estado = Visitado;
+        hayObstaculo = Observar(actual);
+        // Si hay obstaculo vuelve con el mismo vertice y si no hay obstáculo devuelve el próximo vertice
+        if (!hayObstaculo)
+        {
+            proximo = actual->adyacentes[direccionAdyacente()];
+        }
+        else
+        {
+            proximo = actual;
+        }
+
         break;
     case BARRIDO:
         //Detener();
         //usleep(500);
+        proximo = actual;
         break;
     case ESQUIVANDO:
         Detener();
         usleep(500);
+        proximo = actual;
         //hayObstaculo = Observar();
         break;
     case MIRANDO_DERECHA:
         printf("MIRANDO_DERECHA\n");
         servoMirarDerecha();
-        hayObstaculo = Observar();
+        hayObstaculo = Observar(actual);
+        proximo = actual;
         // Vuelve a colocar el servomotor al centro
         servoMirarCentro();
         flagServo = 1;
@@ -420,7 +440,8 @@ void MEF_Accion_Automatico()
     case MIRANDO_IZQUIERDA:
         printf("MIRANDO_IZQUIERDA\n");
         servoMirarIzquierda();
-        hayObstaculo = Observar();
+        hayObstaculo = Observar(actual);
+        proximo = actual;
         // Vuelve a colocar el servomotor al centro
         servoMirarCentro();
         flagServo = 1;
@@ -429,6 +450,7 @@ void MEF_Accion_Automatico()
         contPrueba = 0;
         motorGirarIzquierda();
         printf("Se generon %d interrupciones\n", contPrueba);
+        proximo = actual->adyacentes[direccionAdyacente()];
         // Detener();
         flagMotor = 1;
         break;
@@ -436,6 +458,7 @@ void MEF_Accion_Automatico()
         contPrueba = 0;
         motorGirarDerecha();
         printf("Se generon %d interrupciones\n", contPrueba);
+        proximo = actual->adyacentes[direccionAdyacente()];
         // Detener();
         flagMotor = 1;
         break;
@@ -444,22 +467,39 @@ void MEF_Accion_Automatico()
         motorGirar180();
         printf("Se generon %d interrupciones\n", contPrueba);
         flagMotor = 1;
-        Observar();
-        if (distancia > 10)
+        hayObstaculo = Observar(actual);
+        if (!hayObstaculo)
         {
             hayObstaculo180 = 0;
+            // Si no hay obstaculo pasamos el vertice anterior
+            proximo = actual->adyacentes[direccionAdyacente()];
+            // if (proximo->actual.estado == Visitado)
+            // {
+            //     return;
+            // }
         }
         else
         {
             hayObstaculo180 = 1;
+            proximo = actual;
         }
         // Detener();
-
+        retornando = 1;
         break;
     default:
         break;
     }
-    
+
+    int i;
+    // for(i = 0; i < 4; i++) {
+    //     if(actual->adyacentes[i] != Visitado)
+    //     MEF_Modo_Aspiradora();
+    //     MEF_Accion_Modo(proximo);
+    //     posiblesCaminos--;
+    // }
+    // MEF_Modo_Aspiradora();
+    // MEF_Accion_Modo(proximo);
+    return proximo;
 }
 
 void *funcion_sensor_ultrasonido(void *ptr)
@@ -638,12 +678,25 @@ void MoverPosicion()
     delay();
 }
 
-int Observar()
+int Observar(nodo *actual)
 {
     int obs;
     printf("Observando\n");
     delay();
     obs = Ultrasonico_Trigger();
+    if (actual->adyacentes[direccionAdyacente()] != NULL)
+    {
+        if (actual->adyacentes[direccionAdyacente()]->actual.estado == Visitado)
+        {
+            obs = 1;
+        }
+    }
+    else
+    {
+        // Si el vertice no existe, lo crea
+        crearVertice(actual);
+    }
+
     if (obs)
     {
         printf("Hay obstaculo\n");
@@ -744,17 +797,16 @@ void contar_interrupciones(int cont)
     }
 }
 
-void Secuencia_Inicio(int x, int y)
+nodo *Secuencia_Inicio(void)
 {
     char direccionMayorDistancia;
     vertice v;
     coordenadas coordenadasAdy;
-    nodo * inicial;
-    nodo * adyacente;
-    int distanciaMaxima; 
-    int distanciaCentro; 
-    int distanciaIzquierda; 
-    int distanciaDerecha;
+    nodo *inicial;
+    nodo *proximo;
+    nodo *adyacenteCentro;
+    nodo *adyacenteDerecha;
+    nodo *adyacenteIzquierda;
 
     servoMirarCentro();
 
@@ -765,14 +817,16 @@ void Secuencia_Inicio(int x, int y)
     // Se agrega el vertice inicial al grafo
     inicial = agregar_vertice(&grafoMapa, v);
 
-    hayObstaculo = Observar();
+    hayObstaculo = Observar(inicial);
     distanciaCentro = distancia;
     distancia = 0;
     distanciaMaxima = distanciaCentro;
     direccionMayorDistancia = 'C';
 
+    //adyacenteCentro = crearVertice(inicial);
+
     servoMirarDerecha();
-    hayObstaculo = Observar();
+    hayObstaculo = Observar(inicial);
     distanciaDerecha = distancia;
     distancia = 0;
     if (distanciaDerecha > distanciaMaxima)
@@ -781,8 +835,10 @@ void Secuencia_Inicio(int x, int y)
         direccionMayorDistancia = 'D';
     }
 
+    //adyacenteDerecha = crearVertice(inicial);
+
     servoMirarIzquierda();
-    hayObstaculo = Observar();
+    hayObstaculo = Observar(inicial);
     distanciaIzquierda = distancia;
     distancia = 0;
     if (distanciaIzquierda > distanciaMaxima)
@@ -790,32 +846,42 @@ void Secuencia_Inicio(int x, int y)
         distanciaMaxima = distanciaIzquierda;
         direccionMayorDistancia = 'I';
     }
+
+    //adyacenteIzquierda = crearVertice(inicial);
+
     switch (direccionMayorDistancia)
     {
     case 'C':
         estadoActual = MOVIENDOSE;
+        //proximo = adyacenteCentro;
         break;
 
     case 'D':
         estadoActual = GIRANDO_DERECHA;
+        //proximo = adyacenteDerecha;
         break;
 
     case 'I':
         estadoActual = GIRANDO_IZQUIERDA;
+        //proximo = adyacenteIzquierda;
         break;
     }
     servoMirarCentro();
 
+    printf("IMPRIMIMOS EL GRAFO A VER COMO ESTA\n");
+    printf("===================================\n");
+
+    return inicial;
 }
 
 void delay(void)
 {
-    usleep(3000000);
+    usleep(1000000);
 }
 
-coordenadas coordenadasAyacente(int xAux, int yAux) 
+coordenadas coordenadasAyacente(int xAux, int yAux)
 {
-    coordenadas coordenadasAdyacente; 
+    coordenadas coordenadasAdyacente;
     int direccionTotal = (direccionRobot + direccionServo) % 360;
     switch (direccionTotal)
     {
@@ -833,27 +899,225 @@ coordenadas coordenadasAyacente(int xAux, int yAux)
         break;
     case 270:
         coordenadasAdyacente.x = xAux;
-        coordenadasAdyacente.y = yAux +1;
+        coordenadasAdyacente.y = yAux + 1;
         break;
     default:
         break;
     }
-    
+
     return coordenadasAdyacente;
 }
 
-direccion direccionAdyacente(){
+direccion direccionAdyacente()
+{
     int direccion;
     int direccionTotal = (direccionRobot + direccionServo) % 360;
-    
+
     // Se toma la direccion total que puede ser 0, 90, 180 o 270 y se la divide por 90
     // para que devuelva un valor de 0 a 3 que represente la direccion;
     direccion = direccionTotal / 90;
     return direccion;
 }
 
-// void recursion(int distanciaMaxima, int distanciaCentro, int distanciaIzquierda, int distanciaDerecha,int x, int y){
-//     MEF_Modo_Aspiradora();
-//     MEF_Accion_Modo();
-//     recursion();
-// }
+direccion direccionAdyacenteAnterior()
+{
+    int direccion;
+    int direccionTotal = (direccionRobot + direccionServo) % 360;
+
+    switch (direccionTotal)
+    {
+    case 0:
+        return 2;
+        break;
+    case 90:
+        return 3;
+        break;
+    case 180:
+        return 0;
+        break;
+    case 270:
+        return 1;
+        break;
+    }
+}
+
+nodo *crearVertice(nodo *actual)
+{
+    vertice v;
+    nodo *adyacente;
+    // Se crea el proximo vertice
+    v.coordenadas = coordenadasAyacente(x, y);
+    if (hayObstaculo)
+    {
+        v.estado = Inaccesible;
+    }
+    else
+    {
+        v.estado = NoVisitado;
+    }
+
+    if ((actual->adyacentes[direccionAdyacente()]) == NULL)
+    {
+        // Se agrega al grafo
+        adyacente = agregar_vertice(&grafoMapa, v);
+        // Se buscan todos los vertices adyacentes al vertice creado, que ya existan
+        buscar_y_agregar_adyacentes(adyacente, grafoMapa);
+    }
+    else
+    {
+        adyacente = actual->adyacentes[direccionAdyacente()];
+    }
+
+    // Se imprime el grafo para ver como queda
+    imprimir_grafo(grafoMapa);
+
+    return adyacente;
+}
+
+void recursion(nodo *actual, nodo *anterior)
+{
+
+    nodo *proximo = NULL;
+    estado_automatico estadoRecursion = estadoActual;
+    int i;
+
+    printf("LLAMADA A LA RECURSION CON NODO ACTUAL: X: %d Y: %d Y ESTADO: %d\n", actual->actual.coordenadas.x, actual->actual.coordenadas.y, estadoRecursion);
+
+    proximo = MEF_Accion_Modo(actual);
+    MEF_Modo_Aspiradora();
+    if (!retornando)
+    {
+        // Si el proximo vertice == actual, se envia el actual y anterior, para que no se pierda el anterior
+        if (proximo == actual)
+        {
+            recursion(actual, anterior);
+        }
+        else
+        {
+            recursion(proximo, actual);
+        }
+        printf("Volvio a la recursion que tiene x actual: %d y actual: %d y estado: %d\n", actual->actual.coordenadas.x, actual->actual.coordenadas.y, estadoRecursion);
+    }
+    if (retornando)
+    {
+        if (((estadoRecursion == GIRANDO_DERECHA) || (estadoRecursion == GIRANDO_IZQUIERDA) || (estadoRecursion == MOVIENDOSE)) && (actual != NULL))
+        {
+            for (i = 0; i < 2; i++)
+            {
+                switch (i)
+                {
+                case 0:
+                    printf("MIRANDO_DERECHA FOR\n");
+                    servoMirarDerecha();
+                    hayObstaculo = Observar(actual);
+                    // Vuelve a colocar el servomotor al centro
+                    servoMirarCentro();
+                    if (!hayObstaculo)
+                    {
+                        retornando = 0;
+                        estadoActual = GIRANDO_DERECHA;
+                        recursion(actual, anterior);
+                    }
+                    break;
+                case 1:
+                    printf("MIRANDO_IZQUIERDA FOR\n");
+                    servoMirarIzquierda();
+                    hayObstaculo = Observar(actual);
+                    // Vuelve a colocar el servomotor al centro
+                    servoMirarCentro();
+                    if (!hayObstaculo)
+                    {
+                        retornando = 0;
+                        estadoActual = GIRANDO_IZQUIERDA;
+                        recursion(actual, anterior);
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+            retorna(estadoRecursion, actual, anterior);
+        }
+    }
+    printf("Vuelve de la recursion con:\n");
+    printf("X: %d Y: %d\n", actual->actual.coordenadas.x, actual->actual.coordenadas.y);
+    printf("x real: %d, y real: %d\n", x, y);
+    printf("Estado Recursion: %d \n", estadoRecursion);
+    return;
+}
+
+void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
+{
+    printf("RETORNANDO: ");
+    int xAux;
+    int yAux;
+    switch (estadoRecursion)
+    {
+    // Si el robot estaba moviendose, al volver de la recursión debe moverse en
+    // la nueva dirección, que será la opuesta a la que tenía.
+    case MOVIENDOSE:
+        printf("Mueve adelante\n");
+        MoverAdelante();
+        break;
+    // Si el robot estaba haciendo un giro a derecha o izquierda, al volver de la recursion
+    // debe realizar el giro hacia la direccion del nodo anterior
+    case GIRANDO_IZQUIERDA:
+    case GIRANDO_DERECHA:
+        // Si anterior == NULL, es el nodo inicial y debe terminar la recursion
+        if (anterior != NULL)
+        {
+            xAux = actual->actual.coordenadas.x - anterior->actual.coordenadas.x;
+            yAux = actual->actual.coordenadas.y - anterior->actual.coordenadas.y;
+
+            // Se determina la direccion de retorno utilizando el nodo actual y el anterior
+            if (yAux == 0)
+            {
+                // Si xAux > 0 debe ir hacia la izquierda en la matriz
+                if (xAux > 0)
+                {
+                    while ((direccionRobot % 360) != 180)
+                    {
+                        contPrueba = 0;
+                        motorGirarIzquierda();
+                    }
+                }
+                // Si xAux < 0 debe ir hacia la derecha en la matriz
+                else
+                {
+                    while ((direccionRobot % 360) != 0)
+                    {
+                        contPrueba = 0;
+                        motorGirarIzquierda();
+                    }
+                }
+            }
+            else
+            {
+                // Si yAux > 0 debe ir hacia arriba en la matriz
+                if (yAux > 0)
+                {
+                    while ((direccionRobot % 360) != 90)
+                    {
+                        contPrueba = 0;
+                        motorGirarIzquierda();
+                    }
+                }
+                // Si yAux < 0 debe ir hacia abajo en la matriz
+                else
+                {
+                    while ((direccionRobot % 360) != 270)
+                    {
+                        contPrueba = 0;
+                        motorGirarIzquierda();
+                    }
+                }
+            }
+        }
+        break;
+    default:
+        printf("default\n");
+        break;
+    }
+}
+
+int adyacenteVisitado() {}
