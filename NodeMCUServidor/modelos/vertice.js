@@ -1,5 +1,6 @@
 const sequelizeCon = require('../database/config.js');
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const Grafo = require('./grafo');
 
 const Vertice = sequelizeCon.define('vertice', {
     x: {
@@ -24,6 +25,7 @@ const Vertice = sequelizeCon.define('vertice', {
 
 Vertice.belongsToMany(Vertice, {as:'adyacentes', through: 'Adyacentes' });
 
+Vertice.belongsTo(Grafo);
 // Vertice.hasOne(Vertice, {
 //     as:'siguiente'
 // })

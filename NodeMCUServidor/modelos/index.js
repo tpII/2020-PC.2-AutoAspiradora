@@ -9,6 +9,8 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelizeCon;
 
 db.vertice = require("./vertice.js");
+db.datos = require("./dato.js");
+db.grafo = require("./grafo.js");
 
 module.exports = db;
 
