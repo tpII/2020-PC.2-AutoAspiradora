@@ -876,7 +876,7 @@ nodo *Secuencia_Inicio(void)
 
 void delay(void)
 {
-    usleep(1000000);
+    usleep(250000);
 }
 
 coordenadas coordenadasAyacente(int xAux, int yAux)
