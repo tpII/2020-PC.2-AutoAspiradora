@@ -45,7 +45,10 @@ typedef struct lista
 
 typedef struct grafo
 {
-    // int vertices;
+    char * nombre;
+    int xMax;
+    int yMax;
+    int vertices;
     listaVertices lista;
 } grafo;
 
