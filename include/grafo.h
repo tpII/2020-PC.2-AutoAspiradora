@@ -52,11 +52,20 @@ typedef struct grafo
     listaVertices lista;
 } grafo;
 
+typedef struct datos_recorrido{
+    int fin_x;
+    int fin_y;
+    int origen_x;
+    int origen_y;
+    float vel_max;
+    float distancia;
+} datos_recorrido;
 
-void inicializar_grafo(grafo *grafo);
+void inicializar_grafo(grafo *grafo, char *nombre);
 nodo* agregar_vertice(grafo *grafo, vertice actual);
 void agregar_adyacente(nodo *actual, nodo *destino, direccion dirDestino);
 void imprimir_grafo(grafo grafo);
 void buscar_y_agregar_adyacentes(nodo *vertice, grafo grafo);
+void calculo_dimensiones_mapa(grafo *grafo);
 
 #endif

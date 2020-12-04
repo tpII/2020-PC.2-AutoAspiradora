@@ -53,10 +53,12 @@ void agregar_adyacente(nodo *actual, nodo *destino, direccion dirDestino)
     }
 }
 
-void inicializar_grafo(grafo *grafo)
+void inicializar_grafo(grafo *grafo, char *nombre)
 {
     grafo->lista.cola = NULL;
     grafo->lista.cabeza = grafo->lista.cola;
+    grafo->vertices=0;
+    grafo->nombre=nombre;
 }
 
 void buscar_y_agregar_adyacentes(nodo *vertice, grafo grafo)
@@ -109,54 +111,26 @@ void imprimir_grafo(grafo grafo)
     printf("\n");
 }
 
-// void main()
-// {
-//     nodo *nodoAux;;
-//     grafo grafo;
+void calculo_dimensiones_mapa(grafo *grafo){
+    int xMax = 0;
+    int yMax = 0;
+    nodo *listaVertices = grafo->lista.cabeza;
 
-//     int i;
+    // Se recorre la lista de vertices calculando el x e y maximos.
+    while(listaVertices != NULL){
 
-//     nodo *verticeActual;
-//     nodo *verticeProximo;
-//     inicializar_grafo(&grafo);
-//     vertice actual;
-//     actual.coordenadas.x = 0;
-//     actual.coordenadas.y = 0;
-//     actual.estado = Visitado;
+        if(xMax<listaVertices->actual.coordenadas.x){
+            xMax=listaVertices->actual.coordenadas.x;
+        }
 
-//     verticeActual = agregar_vertice(&grafo, actual);
+        if(yMax<listaVertices->actual.coordenadas.y){
+            yMax=listaVertices->actual.coordenadas.y;
+        }
+        
+        listaVertices = listaVertices->proximo;
+    }
 
-//     vertice proximo;
-//     proximo.coordenadas.x = 1;
-//     proximo.coordenadas.y = 0;
-//     proximo.estado = NoVisitado;
-
-//     verticeProximo = agregar_vertice(&grafo, proximo);
-
-//     agregar_adyacente(verticeActual, verticeProximo, Derecha);
-
-//     nodoAux=grafo.lista.cabeza;
-//     while(nodoAux!=NULL){
-//         printf("\n x: %d y: %d |",nodoAux->actual.coordenadas.x,nodoAux->actual.coordenadas.y);
-//         for(i=0; i<4; i++){
-//             if(nodoAux->adyacentes[i] != NULL){
-//                 printf("-> x: %d y: %d", nodoAux->adyacentes[i]->actual.coordenadas.x, nodoAux->adyacentes[i]->actual.coordenadas.y);
-//             }
-//         }
-//          nodoAux = nodoAux->proximo;
-//     }
-// }
-
-// buscarDireccionOptima();
-// posicionarse()
-// avanzo(direccionOptima){
-//     crearVertice();
-//     while (no revise 4 direcciones){
-//         if (no hay obstaculo && No visite el siguiente)
-//             avanzo(direccionOptima);
-//         else
-//             buscarDireccionOptima();
-//             posicionarse();
-//             avanzo(direccionOptima);
-//     }
-// }
+    // Se le suma uno porque los indices comienzan en 0.
+    grafo->xMax = xMax+1;
+    grafo->yMax = yMax+1;
+}
