@@ -11,6 +11,9 @@ const Grafo = sequelizeCon.define('grafo', {
     },
     longitudY:{
         type: DataTypes.INTEGER
+    },
+    vertices: {
+        type: DataTypes.INTEGER
     }
 });
 

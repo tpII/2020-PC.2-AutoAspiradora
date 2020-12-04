@@ -11,22 +11,12 @@ const Vertice = sequelizeCon.define('vertice', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    visitado:{
+    estado:{
         type: DataTypes.INTEGER
+    },
+    nombreGrafo:{
+        type: DataTypes.STRING
     }
 });
 
-// Vertice.hasMany(Vertice, {
-//     as:'adyacentes',
-//     foreignKey:"adyacenteID"
-// });
-
-// Vertice.belongsTo(Vertice);
-
-Vertice.belongsToMany(Vertice, {as:'adyacentes', through: 'Adyacentes' });
-
-Vertice.belongsTo(Grafo);
-// Vertice.hasOne(Vertice, {
-//     as:'siguiente'
-// })
 module.exports = Vertice;

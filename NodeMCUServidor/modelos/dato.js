@@ -28,6 +28,6 @@ const Datos = sequelizeCon.define('datos', {
     }
 });
 
-Datos.belongsTo(Grafo);
+//Datos.belongsTo(Grafo);
 
 module.exports = Datos;

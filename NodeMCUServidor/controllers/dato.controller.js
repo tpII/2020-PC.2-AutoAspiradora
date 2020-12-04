@@ -6,7 +6,9 @@ module.exports = Dato;
 
 // Create and Save a new Vertice
 async function create(req, res) {
-    if (!req.body.xorigen) {
+    console.log("llego un dato");
+    console.log(req.body);
+    if (!req.body) {
         res.status(400).send({
             message: "Content can not be empty!"
         });
@@ -14,16 +16,18 @@ async function create(req, res) {
     }
 
     const dato = {
-        xorigen: req.body.xorigen,
-        yorigen: req.body.yorigen,
-        xdestino: req.body.xdestino,
-        ydestino: req.body.ydestino,
+        xorigen: req.body.origen_x,
+        yorigen: req.body.origen_y,
+        xdestino: req.body.fin_x,
+        ydestino: req.body.fin_y,
         distancia: req.body.distancia,
-        velocidad: req.body.velocidad
+        velocidad: req.body.vel_max
     };
 
     Dato.create(dato)
         .then(data => {
+            console.log("Se crea dato 2");
+            console.log(data);
             res.send(data);
         })
         .catch(err => {

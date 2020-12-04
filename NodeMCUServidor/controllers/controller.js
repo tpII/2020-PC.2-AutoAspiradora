@@ -16,7 +16,8 @@ async function create(req, res) {
     const vertice = {
         x: req.body.x,
         y: req.body.y,
-        visitado: req.body.visitado
+        estadoGrafo: req.body.estado
+        
     };
 
     Vertice.create(vertice)

@@ -3,15 +3,6 @@
 
 #include "grafo.h"
 
-typedef struct datos_recorrido{
-    int obstaculo_x;
-    int obstaculo_y;
-    int origen_x;
-    int origen_y;
-    float vel_max;
-    float distancia;
-} datos_recorrido;
-
 // Devuelve una variable CURL con la conexión seteada con la url pasada como parámetro.
 CURL * configurar_conexion();
 
@@ -19,7 +10,7 @@ CURL * configurar_conexion();
 int enviar_info_grafo(CURL *, grafo, char *);
 
 // Envía un grafo completo para almacenar en la base de datos.
-int enviar_vertices_grafo(CURL *, grafo, char *);
+int enviar_vertices_grafo(CURL * curl, vertice v, char *nombreGrafo, char * url);
 
 // Envía los datos de los recorridos que realiza entre obstáculos.
 int enviar_datos_recorrido(CURL *, datos_recorrido, char *);

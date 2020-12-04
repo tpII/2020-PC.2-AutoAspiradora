@@ -1,16 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <curl/curl.h>
 #include <unistd.h> //Este es para el usleep
 #include <semaphore.h>
 #include "include/grafo.h"
+#include "include/comunicacion_simulacion_servidor.h"
 
 // Distancias máximas y mínimas que puede medir el sensor hc-sr04 en mm
 #define DIST_MIN 2
 #define DIST_MAX 4000
 
-#define INT_GIRO_90 300         //Cantidad de interrupciones para hacer un giro de 90 grados
-#define INT_GIRO_180 300        //Cantidad de interrupciones para hacer un giro de 180 grados
+#define INT_GIRO_90 30          //Cantidad de interrupciones para hacer un giro de 90 grados
+#define INT_GIRO_180 30         //Cantidad de interrupciones para hacer un giro de 180 grados
 #define INT_AVANZAR_POSICION 23 //Cantidad de interruciones para avanzar 22 cm
 
 // 56 ranuras por segundo => 571.8 mm/s
@@ -66,6 +68,7 @@ direccion direccionAdyacente();
 direccion direccionAdyacenteAnterior();
 void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior);
 void recursion(nodo *actual, nodo *anterior);
+void termino_tramo(nodo* actual);
 
 // Matriz que representa la habitación
 // 0 -> lugar accesible, 1 -> obstáculo
@@ -101,6 +104,13 @@ int hayObstaculo180;    //Indica si hay obstaculo luego de hacer un giro de 180 
 int posiciones;
 int contPrueba;
 int retornando;
+int iniciaRecorrido = 0; //Flag que indica si se salio de la secuencia de inicio y comenzo el recorrido
+int distanciaTramo;
+int velocidadTramo;
+vertice verticeInicioTramo;
+
+
+CURL *curl;
 
 movimiento movimientoRuedaDerecha = ATRAS;
 movimiento movimientoRuedaIzquierda = ADELANTE;
@@ -113,6 +123,10 @@ estado_automatico estadoActualModo;
 
 int flagServo;
 int flagMotor;
+
+char *url_info_grafo = "http://localhost:3000/api/robotAspiradora/grafos";
+char *url_vertices = "http://localhost:3000/api/robotAspiradora/vertices";
+char *url_datos_recorridos = "http://localhost:3000/api/robotAspiradora/dato";
 
 sem_t semaforoDistancia;
 
@@ -136,7 +150,6 @@ int Ultrasonico_Trigger(void)
 grafo grafoMapa;
 void main()
 {
-
     int ret = 0;
 
     srand(time(NULL));
@@ -156,8 +169,11 @@ void main()
     estadoActual = BARRIDO;
     estadoActualModo = AUTOMATICO;
 
+    // Se inicializa la variable para comunicarnos con el servidor
+    curl = configurar_conexion();
+
     // Se inicializa el grafo
-    inicializar_grafo(&grafoMapa);
+    inicializar_grafo(&grafoMapa, "nombre");
 
     ret = pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido, (void *)mensaje);
     pthread_create(&ruedaDer, NULL, funcion_sensor_encoder_derecha, (void *)mensaje2);
@@ -167,6 +183,9 @@ void main()
     // pthread_join(ruedaDer, NULL);
     // pthread_join(ruedaIzq, NULL);
     nodo *inicial = Secuencia_Inicio();
+    iniciaRecorrido=1; //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
+    verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
+    distanciaTramo=0; //Se inicializa la distancia del tramo
     // while (1)
     // {
     recursion(inicial, NULL);
@@ -175,6 +194,12 @@ void main()
     // MEF_Accion_Modo(inicial);
     //}
     //printf("SE ALCANZO EL OBSTÁCULO \n");
+
+    // Se calculan las dimensiones del mapa
+    calculo_dimensiones_mapa(&grafoMapa);
+
+    // Se envía la información del grafo al servidor
+    enviar_info_grafo(curl, grafoMapa, url_info_grafo);
 }
 
 void MEF_Modo_Aspiradora()
@@ -659,6 +684,8 @@ void MoverAdelante()
     default:
         break;
     }
+    // Incrementa la distancia en 25cm;
+    distanciaTramo+=25;
     printf("Avanzando\n");
     delay();
 }
@@ -671,7 +698,7 @@ void MoverPosicion()
     movimientoRuedaDerecha = ADELANTE;
     //delay();
     contar_interrupciones(cont);
-
+    
     // Se crea el nodo en el grafo
 
     printf("El robot avanzó una posicion\n");
@@ -679,7 +706,8 @@ void MoverPosicion()
 }
 
 int Observar(nodo *actual)
-{
+{   
+    int visitado=0;
     int obs;
     printf("Observando\n");
     delay();
@@ -701,6 +729,15 @@ int Observar(nodo *actual)
     {
         printf("Hay obstaculo\n");
         printf("Distancia: %f\n", distancia);
+        // Si el servo esta mirando al centro ,no esta en la posicion inicial y no es un
+        // vertice visidado (inicio recorrido) quiere decir que estaba avanzando 
+        // y encontró un obstáculo, por lo que lo envía al servidor 
+        if((direccionServo == 0) && (iniciaRecorrido) && 
+        ((verticeInicioTramo.coordenadas.x != actual->actual.coordenadas.x) || 
+        (verticeInicioTramo.coordenadas.y != actual -> actual.coordenadas.y ))) {
+            // Envia los datos del tramo realizado al servidor
+            termino_tramo(actual);
+        }
         return 1;
     }
     else
@@ -816,6 +853,10 @@ nodo *Secuencia_Inicio(void)
     v.estado = Visitado;
     // Se agrega el vertice inicial al grafo
     inicial = agregar_vertice(&grafoMapa, v);
+    // Se incrementa la cantidad de vertices del grafo
+    grafoMapa.vertices++;
+    // Se envía el vertice al servidor
+    enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
 
     hayObstaculo = Observar(inicial);
     distanciaCentro = distancia;
@@ -823,7 +864,6 @@ nodo *Secuencia_Inicio(void)
     distanciaMaxima = distanciaCentro;
     direccionMayorDistancia = 'C';
 
-    //adyacenteCentro = crearVertice(inicial);
 
     servoMirarDerecha();
     hayObstaculo = Observar(inicial);
@@ -835,7 +875,6 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'D';
     }
 
-    //adyacenteDerecha = crearVertice(inicial);
 
     servoMirarIzquierda();
     hayObstaculo = Observar(inicial);
@@ -847,7 +886,6 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'I';
     }
 
-    //adyacenteIzquierda = crearVertice(inicial);
 
     switch (direccionMayorDistancia)
     {
@@ -876,7 +914,7 @@ nodo *Secuencia_Inicio(void)
 
 void delay(void)
 {
-    usleep(250000);
+    usleep(20);
 }
 
 coordenadas coordenadasAyacente(int xAux, int yAux)
@@ -962,6 +1000,10 @@ nodo *crearVertice(nodo *actual)
         adyacente = agregar_vertice(&grafoMapa, v);
         // Se buscan todos los vertices adyacentes al vertice creado, que ya existan
         buscar_y_agregar_adyacentes(adyacente, grafoMapa);
+        // Se incrementa la cantidad de vertices del grafo
+        grafoMapa.vertices++;
+        // Se envía el vertice al servidor
+        enviar_vertices_grafo(curl, adyacente->actual, grafoMapa.nombre, url_vertices);
     }
     else
     {
@@ -1120,4 +1162,26 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
     }
 }
 
-int adyacenteVisitado() {}
+void termino_tramo(nodo * actual){
+            datos_recorrido datos;
+            vertice verticeActual = actual->actual;
+
+            datos.fin_x = verticeActual.coordenadas.x;
+            datos.fin_y = verticeActual.coordenadas.y;
+            datos.origen_x = verticeInicioTramo.coordenadas.x;
+            datos.origen_y = verticeInicioTramo.coordenadas.y;
+            datos.distancia = distanciaTramo;
+        
+            // Se calcula una velocidad seudo-aleatoria, para la simulación
+            // 2km/h es aproximadamente la velocidad promedio del robot
+            velocidadTramo = 2 + (double)rand() / (double)RAND_MAX ;
+
+            datos.vel_max = velocidadTramo;
+            
+            printf("Termino tramo\n");
+            enviar_datos_recorrido(curl,datos,url_datos_recorridos);  
+            
+            verticeInicioTramo = actual->actual;
+            distanciaTramo = 0;
+            velocidadTramo = 0;
+}
