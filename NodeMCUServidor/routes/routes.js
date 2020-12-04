@@ -6,6 +6,6 @@ router.post("/", Dato.create);
 
 router.get("/csv", Dato.csvDatos);
 
-    
+
 module.exports = router;
 

@@ -22,6 +22,7 @@ app.get('/',(req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
     //res.json({ message: "Welcome" });
 });
+app.use('/js',express.static(__dirname + '/node_modules/bootstrap/dist/js'));
 app.use('/css', express.static(__dirname + '/node_modules/bootstrap/dist/css'));
 app.use('/icons', express.static(__dirname + '/node_modules/bootstrap-icons/icons'));
 app.use('/imagenes',express.static(__dirname + '/imagenes'));
