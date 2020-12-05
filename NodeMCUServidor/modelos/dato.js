@@ -25,6 +25,9 @@ const Datos = sequelizeCon.define('datos', {
     },
     velocidad: {
         type: DataTypes.INTEGER
+    },
+    nombreGrafo: {
+        type: DataTypes.STRING
     }
 });
 

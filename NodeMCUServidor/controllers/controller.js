@@ -16,7 +16,8 @@ async function create(req, res) {
     const vertice = {
         x: req.body.x,
         y: req.body.y,
-        estadoGrafo: req.body.estado
+        estado: req.body.estado,
+        nombreGrafo: req.body.nombreGrafo
         
     };
 
@@ -90,9 +91,22 @@ async function csvDatos(req, res) {
         });
 
 };
-// exports.findAll = (req, res) => {
 
-// };
+async function findAll(req, res){
+    const nombreGrafo = req.query.nombreGrafo;
+    const vertices = db.vertice.findAll({where: {
+        nombreGrafo: nombreGrafo
+    }})
+    .then(data => {
+        res.send(data);
+    })
+    .catch(err => {
+        res.status(500).send({
+          message:
+            err.message || "Hubo un error recuperando los vertices."
+        });
+      });
+}
 
 // exports.findOne = (req, res) => {
 
@@ -116,6 +130,7 @@ async function csvDatos(req, res) {
 
 module.exports = {
     create,
+    findAll,
     csvVertices,
     csvDatos
 }

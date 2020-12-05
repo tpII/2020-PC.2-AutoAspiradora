@@ -68,7 +68,7 @@ direccion direccionAdyacente();
 direccion direccionAdyacenteAnterior();
 void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior);
 void recursion(nodo *actual, nodo *anterior);
-void termino_tramo(nodo* actual);
+void termino_tramo(nodo *actual);
 
 // Matriz que representa la habitación
 // 0 -> lugar accesible, 1 -> obstáculo
@@ -108,7 +108,6 @@ int iniciaRecorrido = 0; //Flag que indica si se salio de la secuencia de inicio
 int distanciaTramo;
 int velocidadTramo;
 vertice verticeInicioTramo;
-
 
 CURL *curl;
 
@@ -173,7 +172,7 @@ void main()
     curl = configurar_conexion();
 
     // Se inicializa el grafo
-    inicializar_grafo(&grafoMapa, "nombre");
+    inicializar_grafo(&grafoMapa, "HabitacionPrueba");
 
     ret = pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido, (void *)mensaje);
     pthread_create(&ruedaDer, NULL, funcion_sensor_encoder_derecha, (void *)mensaje2);
@@ -183,9 +182,9 @@ void main()
     // pthread_join(ruedaDer, NULL);
     // pthread_join(ruedaIzq, NULL);
     nodo *inicial = Secuencia_Inicio();
-    iniciaRecorrido=1; //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
+    iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
     verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
-    distanciaTramo=0; //Se inicializa la distancia del tramo
+    distanciaTramo = 0;                   //Se inicializa la distancia del tramo
     // while (1)
     // {
     recursion(inicial, NULL);
@@ -685,7 +684,7 @@ void MoverAdelante()
         break;
     }
     // Incrementa la distancia en 25cm;
-    distanciaTramo+=25;
+    distanciaTramo += 25;
     printf("Avanzando\n");
     delay();
 }
@@ -698,7 +697,7 @@ void MoverPosicion()
     movimientoRuedaDerecha = ADELANTE;
     //delay();
     contar_interrupciones(cont);
-    
+
     // Se crea el nodo en el grafo
 
     printf("El robot avanzó una posicion\n");
@@ -706,8 +705,8 @@ void MoverPosicion()
 }
 
 int Observar(nodo *actual)
-{   
-    int visitado=0;
+{
+    int visitado = 0;
     int obs;
     printf("Observando\n");
     delay();
@@ -730,11 +729,12 @@ int Observar(nodo *actual)
         printf("Hay obstaculo\n");
         printf("Distancia: %f\n", distancia);
         // Si el servo esta mirando al centro ,no esta en la posicion inicial y no es un
-        // vertice visidado (inicio recorrido) quiere decir que estaba avanzando 
-        // y encontró un obstáculo, por lo que lo envía al servidor 
-        if((direccionServo == 0) && (iniciaRecorrido) && 
-        ((verticeInicioTramo.coordenadas.x != actual->actual.coordenadas.x) || 
-        (verticeInicioTramo.coordenadas.y != actual -> actual.coordenadas.y ))) {
+        // vertice visidado (inicio recorrido) quiere decir que estaba avanzando
+        // y encontró un obstáculo, por lo que lo envía al servidor
+        if ((direccionServo == 0) && (iniciaRecorrido) &&
+            ((verticeInicioTramo.coordenadas.x != actual->actual.coordenadas.x) ||
+             (verticeInicioTramo.coordenadas.y != actual->actual.coordenadas.y)))
+        {
             // Envia los datos del tramo realizado al servidor
             termino_tramo(actual);
         }
@@ -864,7 +864,6 @@ nodo *Secuencia_Inicio(void)
     distanciaMaxima = distanciaCentro;
     direccionMayorDistancia = 'C';
 
-
     servoMirarDerecha();
     hayObstaculo = Observar(inicial);
     distanciaDerecha = distancia;
@@ -875,7 +874,6 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'D';
     }
 
-
     servoMirarIzquierda();
     hayObstaculo = Observar(inicial);
     distanciaIzquierda = distancia;
@@ -885,7 +883,6 @@ nodo *Secuencia_Inicio(void)
         distanciaMaxima = distanciaIzquierda;
         direccionMayorDistancia = 'I';
     }
-
 
     switch (direccionMayorDistancia)
     {
@@ -983,6 +980,7 @@ nodo *crearVertice(nodo *actual)
 {
     vertice v;
     nodo *adyacente;
+    int hayObstaculo;
     // Se crea el proximo vertice
     v.coordenadas = coordenadasAyacente(x, y);
     if (hayObstaculo)
@@ -1162,26 +1160,25 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
     }
 }
 
-void termino_tramo(nodo * actual){
-            datos_recorrido datos;
-            vertice verticeActual = actual->actual;
+void termino_tramo(nodo *actual)
+{
+    datos_recorrido datos;
+    vertice verticeActual = actual->actual;
 
-            datos.fin_x = verticeActual.coordenadas.x;
-            datos.fin_y = verticeActual.coordenadas.y;
-            datos.origen_x = verticeInicioTramo.coordenadas.x;
-            datos.origen_y = verticeInicioTramo.coordenadas.y;
-            datos.distancia = distanciaTramo;
-        
-            // Se calcula una velocidad seudo-aleatoria, para la simulación
-            // 2km/h es aproximadamente la velocidad promedio del robot
-            velocidadTramo = 2 + (double)rand() / (double)RAND_MAX ;
+    datos.fin_x = verticeActual.coordenadas.x;
+    datos.fin_y = verticeActual.coordenadas.y;
+    datos.origen_x = verticeInicioTramo.coordenadas.x;
+    datos.origen_y = verticeInicioTramo.coordenadas.y;
+    datos.distancia = distanciaTramo;
 
-            datos.vel_max = velocidadTramo;
-            
-            printf("Termino tramo\n");
-            enviar_datos_recorrido(curl,datos,url_datos_recorridos);  
-            
-            verticeInicioTramo = actual->actual;
-            distanciaTramo = 0;
-            velocidadTramo = 0;
+    // Se calcula una velocidad seudo-aleatoria, para la simulación
+    // 2km/h es aproximadamente la velocidad promedio del robot
+    velocidadTramo = 2 + (double)rand() / (double)RAND_MAX;
+
+    datos.vel_max = velocidadTramo;
+
+    enviar_datos_recorrido(curl, datos, grafoMapa.nombre, url_datos_recorridos);
+    verticeInicioTramo = actual->actual;
+    distanciaTramo = 0;
+    velocidadTramo = 0;
 }

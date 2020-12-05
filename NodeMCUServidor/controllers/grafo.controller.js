@@ -32,6 +32,23 @@ async function create(req, res) {
         })
 };
 
+async function findOne(req, res){
+    const nombreHabitacion = req.query.nombreGrafo;
+
+    db.grafo.findOne({
+        where: {
+            nombre: nombreHabitacion
+        }
+    })
+    .then(data =>{
+        res.send(data);
+    }).catch(err => {
+        res.status(500).send({
+            message:
+                err.message || "Algun error ocurrio al recuperar el grafo"
+        })
+    })
+}
 
 // exports.findAll = (req, res) => {
 
@@ -58,5 +75,6 @@ async function create(req, res) {
 // };
 
 module.exports = {
-    create
+    create,
+    findOne
 }

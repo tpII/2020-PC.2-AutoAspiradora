@@ -13,7 +13,7 @@ int enviar_info_grafo(CURL *, grafo, char *);
 int enviar_vertices_grafo(CURL * curl, vertice v, char *nombreGrafo, char * url);
 
 // Envía los datos de los recorridos que realiza entre obstáculos.
-int enviar_datos_recorrido(CURL *, datos_recorrido, char *);
+int enviar_datos_recorrido(CURL *, datos_recorrido, char *nombreGrafo, char *);
 
 // Termina la conexión, debe usarse una vez que no vayan a enviarse más datos.
 int cerrar_conexion(CURL *);

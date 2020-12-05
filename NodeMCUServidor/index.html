@@ -7,8 +7,7 @@
   <link href="css/bootstrap.min.css" rel="stylesheet">
   <link href="js/bootstrap.min.js">
   <style>
-    
-    html{
+    html {
       height: 100%;
     }
 
@@ -78,7 +77,7 @@
       background-color: rgb(177, 177, 177)
     }
 
-    .principal{
+    .principal {
       padding-top: 2%;
       height: 100%;
       background-color: white;
@@ -102,6 +101,73 @@
     }
   </style>
   <script>
+
+    var estadoRobot = {
+      ventiladorEncendido: false,
+      modoAutomatico: false,
+      mapeando: false,
+      direccionManual: "Adelante"
+    }
+
+    function dibujarMapa() {
+
+      var xLong;
+      var yLong;
+
+      const Http = new XMLHttpRequest();
+      var url = 'http://localhost:3000/api/robotAspiradora/grafos?nombreGrafo=HabitacionPrueba';
+      Http.responseType = 'json';
+      Http.open("GET", url);
+      Http.send();
+
+      Http.onreadystatechange = (e) => {
+        //console.log(Http.responseText);
+        if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+          console.log(Http.response);
+          xLong = Http.response.longitudX;
+          yLong = Http.response.longitudY;
+
+          var c = document.getElementById("canvaMapa");
+          // c.height = 15 * yLong;
+          // c.width = 15 * xLong;
+          var anchoRect = c.height / xLong;
+          var altoRect = c.width / yLong;
+          var ctx = c.getContext("2d");
+          ctx.beginPath();
+
+          url = 'http://localhost:3000/api/robotAspiradora/vertices?nombreGrafo=HabitacionPrueba';
+          Http.open("GET", url);
+          Http.send();
+          Http.onreadystatechange = (e) => {
+            //console.log(Http.responseText);
+            if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+              console.log(Http.response);
+              Http.response.forEach(element => {
+                console.log(element.x, element.y, element.estado)
+                x = element.x;
+                y = element.y;
+                if (element.estado == 2) { //Si el estado es 2 significa que es un obstaculo, por el enumerativo en c
+                  ctx.fillStyle = "#FF0000";
+                  ctx.fillRect(15 * x, 15 * y, 15, 15);
+                  ctx.stroke();
+                }
+                else {
+                  ctx.fillStyle = "#0000FF";
+                  ctx.fillRect(15 * x, 15 * y, 15, 15);
+                  ctx.stroke();
+                }
+              });
+            }
+          }
+        }
+      }
+
+
+
+
+    }
+
+
     function switchAdelante() {
       var button_text = document.getElementById("Avanzar_button").value;
       if (button_text == "Avanzar") {
@@ -177,24 +243,44 @@
     // }
 
     // Cambia el estado de automatico a manual y viceversa
-    function switchAutomatico(){
+    function switchAutomatico() {
       var checkbox = document.getElementById("switchAutomatico");
-      if(checkbox.checked){
-        console.log("Esta en modo automatico");
+      const url = "http://localhost:3000/api/robotAspiradora/estado"
+      var xhr = new XMLHttpRequest();
+      if (checkbox.checked) {
+        estadoRobot.modoAutomatico = true;
       }
-      else{
-        console.log("Esta en modo manual");
+      else {
+        estadoRobot.modoAutomatico = false;
       }
+      xhr.open("PUT", url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ estadoRobot }));
     }
 
-    function switchAspirar(){
+    function switchAspirar() {
       var checkbox = document.getElementById("switchAspirar");
-      if(checkbox.checked){
-        console.log("Se activo el aspirado");
+      const url = "http://localhost:3000/api/robotAspiradora/estado"
+      var xhr = new XMLHttpRequest();
+      if (checkbox.checked) {
+        estadoRobot.ventiladorEncendido = true;
       }
-      else{
-        console.log("Se desactivo el aspirado");
+      else {
+        estadoRobot.ventiladorEncendido = false;
       }
+      xhr.open("PUT", url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ estadoRobot }));
+    }
+
+    function switchDireccion(direccion) {
+      const url = "http://localhost:3000/api/robotAspiradora/estado"
+      estadoRobot.direccionManual = direccion;
+      console.log(direccion);
+      var xhr = new XMLHttpRequest();
+      xhr.open("PUT", url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify({ estadoRobot }));
     }
 
     var ajaxRequest = null;
@@ -221,7 +307,7 @@
 <body>
 
   <div class="container-fluid h-100">
-    <div class="row h-100"> 
+    <div class="row h-100">
       <div class="col-md-6 col-lg-4 offset-md-3 offset-lg-4 principal">
         <h2>TDPII - Robot Aspiradora</h2>
         <hr>
@@ -251,33 +337,39 @@
           <hr>
           <div class="row">
             <div class="col-2 offset-5">
-              <button type="button" class="btn btn-primary"><img src="icons/caret-up-fill.svg" alt="" width="32" height="32"
-                  title="Bootstrap"></button>
+              <button onclick="switchDireccion('Adelante')" type="button" class="btn btn-primary"><img
+                  src="icons/caret-up-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
             </div>
           </div>
           <div class="row">
             <div class="col-2 offset-3">
-              <button type="button" class="btn btn-primary"><img src="icons/caret-left-fill.svg" alt="" width="32"
-                  height="32" title="Bootstrap"></button>
+              <button onclick="switchDireccion('Izquierda')" type="button" class="btn btn-primary"><img
+                  src="icons/caret-left-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
             </div>
             <div class="col-2 offset-2">
-              <button type="button" class="btn btn-primary"><img src="icons/caret-right-fill.svg" alt="" width="32"
-                  height="32" title="Bootstrap"></button>
+              <button onclick="switchDireccion('Derecha')" type="button" class="btn btn-primary"><img
+                  src="icons/caret-right-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
             </div>
           </div>
           <div class="row">
             <div class="col-2 offset-5">
-              <button type="button" class="btn btn-primary"><img src="icons/caret-down-fill.svg" alt="" width="32"
-                  height="32" title="Bootstrap"></button>
+              <button onclick="switchDireccion('Atras')" type="button" class="btn btn-primary"><img
+                  src="icons/caret-down-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
             </div>
           </div>
         </div>
-    
+
         <hr>
-    
-        <div class="d-flex justify-content-center">
+
+        <button class="btn btn-primary" id="mostrar_mapa" onclick="dibujarMapa()">Mostrar mapa</button>
+
+        <div><canvas id="canvaMapa" style="border:1px solid #d3d3d3; width: 100%; height: 100%;">
+            Your browser does not support the HTML5 canvas tag.</canvas></div>
+
+        <!-- <div class="d-flex justify-content-center">
           <img src="imagenes/mapa.png" width="300px" height="300px" style="align-self: center;">
-        </div>
+        </div> -->
+
         <!-- <input type="button" id = "Avanzar_button" onclick="switchAdelante()" value="Avanzar"/>
         <br><br>
         <input type="button" id = "Izquierda_button" onclick="switchIzquierda()" value="Girar izquierda" /> 
@@ -287,7 +379,7 @@
         <br><br><br>
         <input type="button" id = "Relay_button" onclick="switchRelay()" value="Aspirar"/> 
         <br><br><br> -->
-    
+
         <!-- <div>
           <span id="CurrentState"></span>
         </div>

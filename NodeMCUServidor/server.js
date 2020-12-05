@@ -3,9 +3,21 @@ const { writeToPath } = require('@fast-csv/format');
 const app = require('./app');
 const path = require('path');
 
+var estadoRobot = {
+    ventiladorEncendido: false,
+    modoAutomatico: false,
+    mapeando: false,
+    direccionManual: 'Adelante'
+}
+
 app.listen(3000, () => console.log("Servidor funcionando en puerto 3000"));
 const db = require("./modelos");
 db.sequelize.sync({force:true});
+//db.sequelize.sync();
+
+
+module.exports = estadoRobot;
+
 // db
 
 // const fs = require("fs");
