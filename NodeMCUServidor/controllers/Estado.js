@@ -10,7 +10,7 @@ var estadoRobot = {
     ventiladorEncendido: 0,
     modoAutomatico: 0,
     mapeando: 0,
-    direccionManual: direccion.adelante
+    direccionManual: direccion.nada
 }
 
 var mapeoActual = {
@@ -53,10 +53,10 @@ async function consultaNombreMapeo(req, res){
 async function consultaEstadoMapeo(req, res){
     // El cliente consulta si termino de mapear
     if(mapeoActual.finalizo){
-        res.status(200).send("Finalizo");
+        res.status(200).send(true);
     }
     else{
-        res.status(200).send("Procesando")
+        res.status(200).send(false)
     }
 }
 

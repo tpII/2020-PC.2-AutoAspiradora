@@ -1,4 +1,5 @@
 const db = require("../modelos/index.js");
+const { estadoRobot } = require("./Estado.js");
 const Grafo = db.grafo;
 
 module.exports = db;

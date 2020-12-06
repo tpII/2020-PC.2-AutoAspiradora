@@ -124,7 +124,7 @@ int iniciaRecorrido = 0; //Flag que indica si se salio de la secuencia de inicio
 int distanciaTramo;
 int velocidadTramo;
 vertice verticeInicioTramo;
-char *nombreHabitacion = "Hola";
+char *nombreHabitacion;
 
 CURL *curl;
 
@@ -218,18 +218,7 @@ void main()
 
     // While principal
     while (1)
-
     {
-
-        inicializar_grafo(&grafoMapa, "HolaHabitacion");
-        printf("debug4\n");
-        inicial = Secuencia_Inicio();
-        iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
-        verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
-        distanciaTramo = 0;                   //Se inicializa la distancia del tramo
-        recursion(inicial, NULL);
-        printf("Mapeado de la habitación finalizado\n");
-        estadoRobot.mapeando = 0;
         consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
         if (estadoRobot.ventiladorEncendido != estadoAnterior.ventiladorEncendido)
         {
@@ -264,14 +253,28 @@ void main()
             MEF_Accion_Modo(NULL);
         }
 
-        if ((estadoRobot.modoAutomatico) && (estadoRobot.mapeando))
+        if ((estadoRobot.modoAutomatico) && (estadoRobot.mapeando) && (!estadoAnterior.mapeando))
         {
-            if (estadoRobot.mapeando)
-            {
-                //consultar_nombre_habitacion(curl, url_consultar_habitacion, nombreHabitacion);
-                printf("PASA A MODO AUTOMATICO -> MAPEANDO\n");
-                printf("%s", nombreHabitacion);
-            }
+            consultar_nombre_habitacion(curl, url_consultar_habitacion, &nombreHabitacion);
+            printf("PASA A MODO AUTOMATICO -> MAPEANDO\n");
+            printf("debug1");
+            printf("%s", nombreHabitacion);
+            printf("debug2");
+            inicializar_grafo(&grafoMapa, nombreHabitacion);
+            inicial = Secuencia_Inicio();
+            iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
+            verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
+            distanciaTramo = 0;                   //Se inicializa la distancia del tramo
+            recursion(inicial, NULL);
+            printf("Mapeado de la habitación finalizado\n");
+            estadoRobot.mapeando = 0;
+            consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
+
+            // Se calculan las dimensiones del mapa
+            calculo_dimensiones_mapa(&grafoMapa);
+
+            // Se envía la información del grafo al servidor
+            enviar_info_grafo(curl, grafoMapa, url_info_grafo);
         }
         estadoAnterior = estadoRobot;
         usleep(1000000);
@@ -280,12 +283,6 @@ void main()
     // MEF_Accion_Modo(inicial);
 
     //printf("SE ALCANZO EL OBSTÁCULO \n");
-
-    // Se calculan las dimensiones del mapa
-    calculo_dimensiones_mapa(&grafoMapa);
-
-    // Se envía la información del grafo al servidor
-    enviar_info_grafo(curl, grafoMapa, url_info_grafo);
 }
 
 void MEF_Modo_Aspiradora()
@@ -610,7 +607,7 @@ nodo *MEF_Accion_Automatico(nodo *actual)
         MoverAdelante();
         posiciones--;
         actual->actual.estado = Visitado;
-        //enviar_vertices_grafo(curl, actual->actual, grafoMapa.nombre, url_vertices);
+        enviar_vertices_grafo(curl, actual->actual, grafoMapa.nombre, url_vertices);
         hayObstaculo = Observar(actual);
         // Si hay obstaculo vuelve con el mismo vertice y si no hay obstáculo devuelve el próximo vertice
         if (!hayObstaculo)
@@ -1035,16 +1032,13 @@ nodo *Secuencia_Inicio(void)
     v.coordenadas.y = y;
     v.estado = Visitado;
     // Se agrega el vertice inicial al grafo
-    printf("debug5\n");
     inicial = agregar_vertice(&grafoMapa, v);
-    printf("debug6\n");
     // Se incrementa la cantidad de vertices del grafo
     grafoMapa.vertices++;
     // Se envía el vertice al servidor
     printf("%s\n", grafoMapa.nombre);
-    printf("debug6.5\n");
-    //enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
-    printf("debug7\n");
+    enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
+
     hayObstaculo = Observar(inicial);
     distanciaCentro = distancia;
     distancia = 0;
@@ -1191,7 +1185,7 @@ nodo *crearVertice(nodo *actual)
         // para enviarlo
         if (hayObstaculo)
         {
-            //enviar_vertices_grafo(curl, adyacente->actual, grafoMapa.nombre, url_vertices);
+            enviar_vertices_grafo(curl, adyacente->actual, grafoMapa.nombre, url_vertices);
         }
     }
     else

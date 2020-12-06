@@ -3,9 +3,9 @@
 ////////////////////////////////////////
 const Sequelize = require('sequelize');
 
-const sequelizeCon = new Sequelize(`mysql://root:@localhost:3306/aspiradoraBD`,{
-    dialect: 'mysql',
-    protocol: 'mysql',
+const sequelizeCon = new Sequelize(`postgres://postgres:postgres@localhost:5433/aspiradoraRobot`,{
+    dialect: 'postgres',
+    protocol: 'postgres',
 });
 
 module.exports = sequelizeCon;

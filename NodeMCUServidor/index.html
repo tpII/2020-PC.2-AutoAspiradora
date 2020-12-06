@@ -128,7 +128,7 @@
       Http.onreadystatechange = (e) => {
         if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
           habitaciones = Http.response;
-          document.getElementById("")
+          console.log(habitaciones);
           for (habitacion of habitaciones) {
             console.log(habitacion.nombre);
             var str;
@@ -145,11 +145,13 @@
       recuperarHabitaciones();
     }, false);
 
-    function dibujarMapa(nombreHabitacion) {
+    function dibujarMapa() {
 
       var xLong;
       var yLong;
       
+      var nombreHabitacion = document.getElementById("seleccionHabitacion").value;
+
       const Http = new XMLHttpRequest();
       var url = `http://localhost:3000/api/robotAspiradora/grafos?nombreGrafo=${nombreHabitacion}`;
       Http.responseType = 'json';
@@ -210,10 +212,21 @@
       console.log(nombreNuevaHabitacion);
       const Http = new XMLHttpRequest();
       var url = "http://localhost:3000/api/robotAspiradora/mapearHabitacion";
+      var terminoMapeo;
       Http.responseType = 'json';
       Http.open("PUT", url);
       Http.setRequestHeader('Content-Type', 'application/json');
       Http.send(JSON.stringify({ "nombre": nombreNuevaHabitacion }));
+      Http.onreadystatechange = (e) => {
+        if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+          // Polling hasta que haya terminado de mapear la habitacion
+          url = "http://localhost:3000/api/robotAspiradora/mapearHabitacion";
+          Http.open("GET, url")
+          while(!TerminoMapeo){
+// HACER ESTO
+          }
+        }
+      }
     }
 
 

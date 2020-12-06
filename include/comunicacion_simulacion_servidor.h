@@ -34,6 +34,6 @@ int cerrar_conexion(CURL *);
 
 void consultar_estado_robot(CURL *curl, char * url, struct estadoRobot * estado);
 
-void consultar_nombre_habitacion(CURL *curl, char * url, char * nombreHabitacion);
+void consultar_nombre_habitacion(CURL *curl, char * url, char ** nombreHabitacion);
 
 #endif

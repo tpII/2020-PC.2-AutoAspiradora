@@ -6,8 +6,8 @@ const app = require('./app');
 
 app.listen(3000, () => console.log("Servidor funcionando en puerto 3000"));
 const db = require("./modelos");
-// db.sequelize.sync({force:true});
-db.sequelize.sync();
+db.sequelize.sync({force:true});
+//db.sequelize.sync();
 
 
 // db

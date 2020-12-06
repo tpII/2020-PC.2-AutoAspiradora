@@ -21,10 +21,10 @@ const Datos = sequelizeCon.define('datos', {
         allowNull: false
     },
     distancia: {
-        type: DataTypes.INTEGER
+        type: DataTypes.FLOAT
     },
     velocidad: {
-        type: DataTypes.INTEGER
+        type: DataTypes.FLOAT
     },
     nombreGrafo: {
         type: DataTypes.STRING
