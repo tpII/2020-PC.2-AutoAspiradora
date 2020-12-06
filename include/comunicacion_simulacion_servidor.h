@@ -3,6 +3,20 @@
 
 #include "grafo.h"
 
+struct estadoRobot
+{
+    int ventiladorEncendido;
+    int modoAutomatico;
+    int mapeando;
+    int direccionManual;
+};
+
+struct string
+{
+    char *ptr;
+    size_t len;
+};
+
 // Devuelve una variable CURL con la conexión seteada con la url pasada como parámetro.
 CURL * configurar_conexion();
 
@@ -17,5 +31,9 @@ int enviar_datos_recorrido(CURL *, datos_recorrido, char *nombreGrafo, char *);
 
 // Termina la conexión, debe usarse una vez que no vayan a enviarse más datos.
 int cerrar_conexion(CURL *);
+
+void consultar_estado_robot(CURL *curl, char * url, struct estadoRobot * estado);
+
+void consultar_nombre_habitacion(CURL *curl, char * url, char * nombreHabitacion);
 
 #endif

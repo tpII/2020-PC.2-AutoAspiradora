@@ -74,7 +74,6 @@
     body {
       height: 100%;
       font-size: 140%;
-      background-color: rgb(177, 177, 177)
     }
 
     .principal {
@@ -102,20 +101,57 @@
   </style>
   <script>
 
-    var estadoRobot = {
-      ventiladorEncendido: false,
-      modoAutomatico: false,
-      mapeando: false,
-      direccionManual: "Adelante"
+    var mapaOculto = true;
+
+    const direccion = {
+      adelante: 0,
+      atras: 1,
+      izquierda: 2,
+      derecha: 3,
+      nada: 4
     }
 
-    function dibujarMapa() {
+    var estadoRobot = {
+      ventiladorEncendido: 0,
+      modoAutomatico: 0,
+      mapeando: 0,
+      direccionManual: direccion.nada
+    }
+
+    var habitaciones;
+    function recuperarHabitaciones() {
+      const Http = new XMLHttpRequest();
+      var url = 'http://localhost:3000/api/robotAspiradora/grafos/lista';
+      Http.responseType = 'json';
+      Http.open("GET", url);
+      Http.send();
+      Http.onreadystatechange = (e) => {
+        if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+          habitaciones = Http.response;
+          document.getElementById("")
+          for (habitacion of habitaciones) {
+            console.log(habitacion.nombre);
+            var str;
+            str += "<option>" + habitacion.nombre + "</option>"
+            document.getElementById("seleccionHabitacion").innerHTML = str;
+          }
+        }
+      };
+    }
+
+    // Cuando carga la página se oculta el canvas hasta que el usuario presione crear mapa
+    window.addEventListener("DOMContentLoaded", function () {
+      document.getElementById("canvaMapa").hidden = mapaOculto;
+      recuperarHabitaciones();
+    }, false);
+
+    function dibujarMapa(nombreHabitacion) {
 
       var xLong;
       var yLong;
-
+      
       const Http = new XMLHttpRequest();
-      var url = 'http://localhost:3000/api/robotAspiradora/grafos?nombreGrafo=HabitacionPrueba';
+      var url = `http://localhost:3000/api/robotAspiradora/grafos?nombreGrafo=${nombreHabitacion}`;
       Http.responseType = 'json';
       Http.open("GET", url);
       Http.send();
@@ -130,12 +166,14 @@
           var c = document.getElementById("canvaMapa");
           // c.height = 15 * yLong;
           // c.width = 15 * xLong;
-          var anchoRect = c.height / xLong;
-          var altoRect = c.width / yLong;
+          var ladoRect = c.width / xLong;
+          // Se modifica el alto en funcion del ancho y el tamaño del eje Y, para que cada vertice se
+          // dibuje como un cuadrado
+          c.height = ladoRect * yLong;
           var ctx = c.getContext("2d");
           ctx.beginPath();
 
-          url = 'http://localhost:3000/api/robotAspiradora/vertices?nombreGrafo=HabitacionPrueba';
+          url = `http://localhost:3000/api/robotAspiradora/vertices?nombreGrafo=${nombreHabitacion}`;
           Http.open("GET", url);
           Http.send();
           Http.onreadystatechange = (e) => {
@@ -143,28 +181,39 @@
             if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
               console.log(Http.response);
               Http.response.forEach(element => {
-                console.log(element.x, element.y, element.estado)
+                console.log(element.x, element.y, element.estado);
                 x = element.x;
                 y = element.y;
                 if (element.estado == 2) { //Si el estado es 2 significa que es un obstaculo, por el enumerativo en c
                   ctx.fillStyle = "#FF0000";
-                  ctx.fillRect(15 * x, 15 * y, 15, 15);
+                  ctx.fillRect(ladoRect * x, ladoRect * y, ladoRect, ladoRect);
                   ctx.stroke();
                 }
                 else {
                   ctx.fillStyle = "#0000FF";
-                  ctx.fillRect(15 * x, 15 * y, 15, 15);
+                  ctx.fillRect(ladoRect * x, ladoRect * y, ladoRect, ladoRect);
                   ctx.stroke();
                 }
+                mapaOculto = false;
+                document.getElementById("canvaMapa").hidden = mapaOculto;
+
               });
             }
           }
         }
       }
 
+    }
 
-
-
+    function mapearHabitacion(){
+      var nombreNuevaHabitacion = document.getElementById("nombreNuevaHabitacion").value;
+      console.log(nombreNuevaHabitacion);
+      const Http = new XMLHttpRequest();
+      var url = "http://localhost:3000/api/robotAspiradora/mapearHabitacion";
+      Http.responseType = 'json';
+      Http.open("PUT", url);
+      Http.setRequestHeader('Content-Type', 'application/json');
+      Http.send(JSON.stringify({ "nombre": nombreNuevaHabitacion }));
     }
 
 
@@ -248,10 +297,18 @@
       const url = "http://localhost:3000/api/robotAspiradora/estado"
       var xhr = new XMLHttpRequest();
       if (checkbox.checked) {
-        estadoRobot.modoAutomatico = true;
+        estadoRobot.modoAutomatico = 1;
+        // Se deshabilitan los botones para controlar el robot manualmente
+        for (var i = 0; i < 4; i++) {
+          document.getElementById(`boton${i}`).disabled = true;
+        }
       }
       else {
-        estadoRobot.modoAutomatico = false;
+        estadoRobot.modoAutomatico = 0;
+        // Se habilitan los botones para controlar el robot manualmente
+        for (var i = 0; i < 4; i++) {
+          document.getElementById(`boton${i}`).disabled = false;
+        }
       }
       xhr.open("PUT", url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
@@ -263,24 +320,25 @@
       const url = "http://localhost:3000/api/robotAspiradora/estado"
       var xhr = new XMLHttpRequest();
       if (checkbox.checked) {
-        estadoRobot.ventiladorEncendido = true;
+        estadoRobot.ventiladorEncendido = 1;
       }
       else {
-        estadoRobot.ventiladorEncendido = false;
+        estadoRobot.ventiladorEncendido = 0;
       }
       xhr.open("PUT", url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({ estadoRobot }));
     }
 
-    function switchDireccion(direccion) {
+    function switchDireccion(nuevaDireccion) {
       const url = "http://localhost:3000/api/robotAspiradora/estado"
-      estadoRobot.direccionManual = direccion;
-      console.log(direccion);
+      estadoRobot.direccionManual = nuevaDireccion;
+      console.log(nuevaDireccion);
       var xhr = new XMLHttpRequest();
       xhr.open("PUT", url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({ estadoRobot }));
+      estadoRobot.direccionManual = direccion.nada;
     }
 
     var ajaxRequest = null;
@@ -337,35 +395,55 @@
           <hr>
           <div class="row">
             <div class="col-2 offset-5">
-              <button onclick="switchDireccion('Adelante')" type="button" class="btn btn-primary"><img
-                  src="icons/caret-up-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
+              <button id="boton0" onclick="switchDireccion(direccion.adelante)" type="button"
+                class="btn btn-primary"><img src="icons/caret-up-fill.svg" alt="" width="32" height="32"
+                  title="Bootstrap"></button>
             </div>
           </div>
           <div class="row">
             <div class="col-2 offset-3">
-              <button onclick="switchDireccion('Izquierda')" type="button" class="btn btn-primary"><img
-                  src="icons/caret-left-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
+              <button id="boton1" onclick="switchDireccion(direccion.izquierda)" type="button"
+                class="btn btn-primary"><img src="icons/caret-left-fill.svg" alt="" width="32" height="32"
+                  title="Bootstrap"></button>
             </div>
             <div class="col-2 offset-2">
-              <button onclick="switchDireccion('Derecha')" type="button" class="btn btn-primary"><img
-                  src="icons/caret-right-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
+              <button id="boton2" onclick="switchDireccion(direccion.derecha)" type="button"
+                class="btn btn-primary"><img src="icons/caret-right-fill.svg" alt="" width="32" height="32"
+                  title="Bootstrap"></button>
             </div>
           </div>
           <div class="row">
             <div class="col-2 offset-5">
-              <button onclick="switchDireccion('Atras')" type="button" class="btn btn-primary"><img
+              <button id="boton3" onclick="switchDireccion(direccion.atras)" type="button" class="btn btn-primary"><img
                   src="icons/caret-down-fill.svg" alt="" width="32" height="32" title="Bootstrap"></button>
             </div>
           </div>
         </div>
 
         <hr>
+        <div class="input-group mb-3">
+          <input id="nombreNuevaHabitacion" type="text" class="form-control" placeholder="Nueva habitación">
+          <div class="input-group-append">
+            <button class="btn btn-primary" id="mapear" onclick="mapearHabitacion()">Mapear habitación</button>
+          </div>
+        </div>
 
-        <button class="btn btn-primary" id="mostrar_mapa" onclick="dibujarMapa()">Mostrar mapa</button>
+        <div class="input-group mb-3">
+          <select id="seleccionHabitacion" class="custom-select">
+            <option selected>Habitaciones</option>
+          </select>
+          <div class="input-group-append">
+            <button class="btn btn-primary" id="mostrar_mapa" onclick="dibujarMapa()">Mostrar mapa</button>
+          </div>
+        </div>
 
-        <div><canvas id="canvaMapa" style="border:1px solid #d3d3d3; width: 100%; height: 100%;">
+
+        <div><canvas id="canvaMapa"
+            style="border:1px solid #d3d3d3; background-color:#FF0000;  width: 100%; height: 100%;">
             Your browser does not support the HTML5 canvas tag.</canvas></div>
 
+
+        
         <!-- <div class="d-flex justify-content-center">
           <img src="imagenes/mapa.png" width="300px" height="300px" style="align-self: center;">
         </div> -->

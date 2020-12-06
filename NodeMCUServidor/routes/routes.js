@@ -13,6 +13,8 @@ router.post("/grafos", Grafo.create);
 
 router.get("/grafos", Grafo.findOne);
 
+router.get("/grafos/lista", Grafo.findAll);
+
 router.post("/vertices", Vertice.create);
 
 router.get("/vertices", Vertice.findAll);
@@ -20,6 +22,12 @@ router.get("/vertices", Vertice.findAll);
 router.post("/dato", Dato.create);
 
 router.put("/estado", Estado.cambiarEstado);
+
+router.get("/consultaEstado", Estado.consultaEstado);
+
+router.get("/consultaNombre", Estado.consultaNombreMapeo);
+
+router.put("/mapearHabitacion", Estado.mapearHabitacion);
 
 module.exports = router;
 

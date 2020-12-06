@@ -50,9 +50,19 @@ async function findOne(req, res){
     })
 }
 
-// exports.findAll = (req, res) => {
-
-// };
+async function findAll(req, res){
+    db.grafo.findAll({
+        attributes: ['nombre']
+    })
+    .then(data => {
+        res.send(data);
+    }).catch(err => {
+        res.status(500).send({
+            message:
+                err.message || "Algun error ocurrio al recuperar los grafos"
+        })
+    })
+};
 
 // exports.findOne = (req, res) => {
 
@@ -76,5 +86,6 @@ async function findOne(req, res){
 
 module.exports = {
     create,
-    findOne
+    findOne,
+    findAll
 }

@@ -32,6 +32,16 @@ typedef enum
     MANUAL,
     AUTOMATICO
 } estado_modo;
+
+typedef enum //Indica la direccion en que debe moverse en estado manual
+{
+    AVANZAR,
+    RETROCEDER,
+    GIRAR_IZQUIERDA,
+    GIRAR_DERECHA,
+    NADA
+} accion_manual;
+
 typedef enum
 {
     MOVIENDOSE,
@@ -41,13 +51,16 @@ typedef enum
     MIRANDO_DERECHA,
     GIRANDO_DERECHA,
     GIRANDO_IZQUIERDA,
-    GIRANDO_180
+    GIRANDO_180,
+    DETENIDO
 } estado_automatico;
 
 void MEF_Modo_Aspiradora();
 void MEF_Automatico();
+void MEF_Manual();
 nodo *MEF_Accion_Modo(nodo *);
 nodo *MEF_Accion_Automatico(nodo *);
+void MEF_Accion_Manual();
 
 void Detener();
 void MoverAdelante();
@@ -69,6 +82,9 @@ direccion direccionAdyacenteAnterior();
 void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior);
 void recursion(nodo *actual, nodo *anterior);
 void termino_tramo(nodo *actual);
+
+// En esta variable se guarda el estado que llega del servidor
+struct estadoRobot estadoRobot;
 
 // Matriz que representa la habitación
 // 0 -> lugar accesible, 1 -> obstáculo
@@ -108,6 +124,7 @@ int iniciaRecorrido = 0; //Flag que indica si se salio de la secuencia de inicio
 int distanciaTramo;
 int velocidadTramo;
 vertice verticeInicioTramo;
+char *nombreHabitacion = "Hola";
 
 CURL *curl;
 
@@ -122,10 +139,13 @@ estado_automatico estadoActualModo;
 
 int flagServo;
 int flagMotor;
+int flagAvanzo = 0;
 
 char *url_info_grafo = "http://localhost:3000/api/robotAspiradora/grafos";
 char *url_vertices = "http://localhost:3000/api/robotAspiradora/vertices";
 char *url_datos_recorridos = "http://localhost:3000/api/robotAspiradora/dato";
+char *url_consultar_estado = "http://localhost:3000/api/robotAspiradora/consultaEstado";
+char *url_consultar_habitacion = "http://localhost:3000/api/robotAspiradora/consultaNombre";
 
 sem_t semaforoDistancia;
 
@@ -149,6 +169,7 @@ int Ultrasonico_Trigger(void)
 grafo grafoMapa;
 void main()
 {
+
     int ret = 0;
 
     srand(time(NULL));
@@ -165,33 +186,99 @@ void main()
 
     int cant;
 
-    estadoActual = BARRIDO;
-    estadoActualModo = AUTOMATICO;
+    struct estadoRobot estadoAnterior;
 
     // Se inicializa la variable para comunicarnos con el servidor
     curl = configurar_conexion();
-
-    // Se inicializa el grafo
-    inicializar_grafo(&grafoMapa, "HabitacionPrueba");
+    cerrar_conexion(curl);
+    curl = configurar_conexion();
+    nodo *inicial;
 
     ret = pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido, (void *)mensaje);
     pthread_create(&ruedaDer, NULL, funcion_sensor_encoder_derecha, (void *)mensaje2);
     pthread_create(&ruedaIzq, NULL, funcion_sensor_encoder_izquierda, (void *)mensaje3);
 
+    printf("La aspiradora entra en funcionamiento\n");
+    consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
+    if (estadoRobot.modoAutomatico)
+    {
+        printf("El robot está en modo automático\n");
+        estadoActual = BARRIDO;
+        estadoActualModo = AUTOMATICO;
+    }
+    else
+    {
+        printf("El robot está en modo manual\n");
+        estadoActual = DETENIDO;
+        estadoActualModo = MANUAL;
+    }
     // pthread_join(ultrasonido, NULL);
     // pthread_join(ruedaDer, NULL);
     // pthread_join(ruedaIzq, NULL);
-    nodo *inicial = Secuencia_Inicio();
-    iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
-    verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
-    distanciaTramo = 0;                   //Se inicializa la distancia del tramo
-    // while (1)
-    // {
-    recursion(inicial, NULL);
-    printf("Mapeado de la habitación finalizado\n");
+
+    // While principal
+    while (1)
+
+    {
+
+        inicializar_grafo(&grafoMapa, "HolaHabitacion");
+        printf("debug4\n");
+        inicial = Secuencia_Inicio();
+        iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
+        verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
+        distanciaTramo = 0;                   //Se inicializa la distancia del tramo
+        recursion(inicial, NULL);
+        printf("Mapeado de la habitación finalizado\n");
+        estadoRobot.mapeando = 0;
+        consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
+        if (estadoRobot.ventiladorEncendido != estadoAnterior.ventiladorEncendido)
+        {
+            if (estadoRobot.ventiladorEncendido == 1)
+            {
+                printf("Robot comienza a aspirar\n");
+            }
+            else
+            {
+                printf("Robot deja de aspirar\n");
+            }
+        }
+        if (estadoRobot.modoAutomatico != estadoAnterior.modoAutomatico)
+        {
+            if (estadoRobot.modoAutomatico == 1)
+            {
+                estadoActual = BARRIDO;
+                estadoActualModo = AUTOMATICO;
+                printf("PASA A MODO AUTOMATICO\n");
+            }
+            else
+            {
+                printf("PASA A MODO MANUAL\n");
+                estadoActualModo = MANUAL;
+                estadoActual = DETENIDO;
+            }
+        }
+
+        if (!estadoRobot.modoAutomatico)
+        {
+            MEF_Modo_Aspiradora();
+            MEF_Accion_Modo(NULL);
+        }
+
+        if ((estadoRobot.modoAutomatico) && (estadoRobot.mapeando))
+        {
+            if (estadoRobot.mapeando)
+            {
+                //consultar_nombre_habitacion(curl, url_consultar_habitacion, nombreHabitacion);
+                printf("PASA A MODO AUTOMATICO -> MAPEANDO\n");
+                printf("%s", nombreHabitacion);
+            }
+        }
+        estadoAnterior = estadoRobot;
+        usleep(1000000);
+    }
     // MEF_Modo_Aspiradora();
     // MEF_Accion_Modo(inicial);
-    //}
+
     //printf("SE ALCANZO EL OBSTÁCULO \n");
 
     // Se calculan las dimensiones del mapa
@@ -206,9 +293,70 @@ void MEF_Modo_Aspiradora()
     switch (estadoActualModo)
     { //Si esta en manual solo se fija si el estado pasa a automatico
     case MANUAL:
+        MEF_Manual();
         break;
     case AUTOMATICO: //Si esta en automatico se fija si pasa a manual y ejecuta la sub-maquina de estados del estado automatico
         MEF_Automatico();
+        break;
+    default:
+        break;
+    }
+}
+
+void MEF_Manual()
+{
+    //Esta es la sub-máquina de estados del estado manual
+    switch (estadoActual)
+    {
+    case MOVIENDOSE:
+        if (flagAvanzo)
+        {
+            flagAvanzo = 0;
+            estadoActual = DETENIDO;
+        }
+        break;
+    case GIRANDO_DERECHA:
+        if (flagMotor)
+        {
+            flagMotor = 0;
+            estadoActual = DETENIDO;
+        }
+        break;
+    case GIRANDO_IZQUIERDA:
+        if (flagMotor)
+        {
+            flagMotor = 0;
+            estadoActual = DETENIDO;
+        }
+        break;
+    case GIRANDO_180:
+        if (flagMotor)
+        {
+            flagMotor = 0;
+            estadoActual = DETENIDO;
+        }
+        break;
+    case DETENIDO:
+        switch (estadoRobot.direccionManual)
+        {
+        case AVANZAR:
+            estadoActual = MOVIENDOSE;
+            break;
+        case RETROCEDER:
+            estadoActual = GIRANDO_180;
+            break;
+        case GIRAR_IZQUIERDA:
+            estadoActual = GIRANDO_IZQUIERDA;
+            break;
+        case GIRAR_DERECHA:
+            estadoActual = GIRANDO_DERECHA;
+            break;
+        case NADA:
+            estadoActual = DETENIDO;
+            break;
+        default:
+            break;
+        }
         break;
     default:
         break;
@@ -406,11 +554,44 @@ nodo *MEF_Accion_Modo(nodo *inicial)
     switch (estadoActualModo)
     {
     case MANUAL:
-        usleep(1000000);
-        Detener();
+        MEF_Accion_Manual();
         break;
     case AUTOMATICO:
         return MEF_Accion_Automatico(inicial);
+        break;
+    default:
+        break;
+    }
+}
+
+void MEF_Accion_Manual()
+{
+    switch (estadoActual)
+    {
+    case MOVIENDOSE:
+        // Se simula la activacion de ambos motores
+        movimientoRuedaIzquierda = ADELANTE;
+        movimientoRuedaDerecha = ADELANTE;
+        printf("El robot avanzo 25 cm\n");
+        flagAvanzo = 1;
+        break;
+    case GIRANDO_DERECHA:
+        motorGirarDerecha();
+        flagMotor = 1;
+        break;
+    case GIRANDO_IZQUIERDA:
+        motorGirarIzquierda();
+        flagMotor = 1;
+        break;
+    case GIRANDO_180:
+        motorGirar180();
+        flagMotor = 1;
+        break;
+    case DETENIDO:
+        // Se simula la detención de los motores
+        movimientoRuedaIzquierda = QUIETO;
+        movimientoRuedaDerecha = QUIETO;
+
         break;
     default:
         break;
@@ -429,6 +610,7 @@ nodo *MEF_Accion_Automatico(nodo *actual)
         MoverAdelante();
         posiciones--;
         actual->actual.estado = Visitado;
+        //enviar_vertices_grafo(curl, actual->actual, grafoMapa.nombre, url_vertices);
         hayObstaculo = Observar(actual);
         // Si hay obstaculo vuelve con el mismo vertice y si no hay obstáculo devuelve el próximo vertice
         if (!hayObstaculo)
@@ -722,6 +904,7 @@ int Observar(nodo *actual)
     {
         // Si el vertice no existe, lo crea
         crearVertice(actual);
+        printf("creo el vertice\n");
     }
 
     if (obs)
@@ -852,12 +1035,16 @@ nodo *Secuencia_Inicio(void)
     v.coordenadas.y = y;
     v.estado = Visitado;
     // Se agrega el vertice inicial al grafo
+    printf("debug5\n");
     inicial = agregar_vertice(&grafoMapa, v);
+    printf("debug6\n");
     // Se incrementa la cantidad de vertices del grafo
     grafoMapa.vertices++;
     // Se envía el vertice al servidor
-    enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
-
+    printf("%s\n", grafoMapa.nombre);
+    printf("debug6.5\n");
+    //enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
+    printf("debug7\n");
     hayObstaculo = Observar(inicial);
     distanciaCentro = distancia;
     distancia = 0;
@@ -1000,8 +1187,12 @@ nodo *crearVertice(nodo *actual)
         buscar_y_agregar_adyacentes(adyacente, grafoMapa);
         // Se incrementa la cantidad de vertices del grafo
         grafoMapa.vertices++;
-        // Se envía el vertice al servidor
-        enviar_vertices_grafo(curl, adyacente->actual, grafoMapa.nombre, url_vertices);
+        // Se envía el vertice al servidor sólo si es un obstáculo, si no se espera a que se visite
+        // para enviarlo
+        if (hayObstaculo)
+        {
+            //enviar_vertices_grafo(curl, adyacente->actual, grafoMapa.nombre, url_vertices);
+        }
     }
     else
     {

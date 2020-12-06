@@ -1,22 +1,14 @@
 // Se levanta un servidor web, utilizando Node.js y la librería Express.js
 const { writeToPath } = require('@fast-csv/format');
-const app = require('./app');
 const path = require('path');
+const app = require('./app');
 
-var estadoRobot = {
-    ventiladorEncendido: false,
-    modoAutomatico: false,
-    mapeando: false,
-    direccionManual: 'Adelante'
-}
 
 app.listen(3000, () => console.log("Servidor funcionando en puerto 3000"));
 const db = require("./modelos");
-db.sequelize.sync({force:true});
-//db.sequelize.sync();
+// db.sequelize.sync({force:true});
+db.sequelize.sync();
 
-
-module.exports = estadoRobot;
 
 // db
 

@@ -6,7 +6,7 @@
 nodo *agregar_vertice(grafo *grafo, vertice actual)
 {
     int i;
-
+    
     nodo *nuevoNodo = (nodo *)malloc(sizeof(nodo));
     nuevoNodo->actual = actual;
     // Se inicializan en NULL los 4 nodos adyacentes
