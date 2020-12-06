@@ -29,5 +29,7 @@ router.get("/consultaNombre", Estado.consultaNombreMapeo);
 
 router.put("/mapearHabitacion", Estado.mapearHabitacion);
 
+router.get("/consultaEstadoMapeo", Estado.consultaEstadoMapeo);
+
 module.exports = router;
 

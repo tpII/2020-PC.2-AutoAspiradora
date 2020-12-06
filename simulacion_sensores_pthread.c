@@ -52,6 +52,7 @@ typedef enum
     GIRANDO_DERECHA,
     GIRANDO_IZQUIERDA,
     GIRANDO_180,
+    REVERSA,
     DETENIDO
 } estado_automatico;
 
@@ -140,6 +141,7 @@ estado_automatico estadoActualModo;
 int flagServo;
 int flagMotor;
 int flagAvanzo = 0;
+int flagRetrocedio = 0;
 
 char *url_info_grafo = "http://localhost:3000/api/robotAspiradora/grafos";
 char *url_vertices = "http://localhost:3000/api/robotAspiradora/vertices";
@@ -255,6 +257,14 @@ void main()
 
         if ((estadoRobot.modoAutomatico) && (estadoRobot.mapeando) && (!estadoAnterior.mapeando))
         {
+            // Si ya hay un grafo en memoria, cuando se quiere crear uno nuevo se libera el anterior
+            while (grafoMapa.lista.cabeza != NULL)
+            {
+                nodo *aux = grafoMapa.lista.cabeza;
+                grafoMapa.lista.cabeza = grafoMapa.lista.cabeza->proximo;
+                free(aux);
+            }
+
             consultar_nombre_habitacion(curl, url_consultar_habitacion, &nombreHabitacion);
             printf("PASA A MODO AUTOMATICO -> MAPEANDO\n");
             printf("debug1");
@@ -269,7 +279,11 @@ void main()
             printf("Mapeado de la habitación finalizado\n");
             estadoRobot.mapeando = 0;
             consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
-
+            x = 1;
+            y = 1;
+            direccionRobot = 0;
+            direccionServo = 0;
+            retornando = 0;
             // Se calculan las dimensiones del mapa
             calculo_dimensiones_mapa(&grafoMapa);
 
@@ -326,10 +340,10 @@ void MEF_Manual()
             estadoActual = DETENIDO;
         }
         break;
-    case GIRANDO_180:
-        if (flagMotor)
+    case REVERSA:
+        if (flagRetrocedio)
         {
-            flagMotor = 0;
+            flagRetrocedio = 0;
             estadoActual = DETENIDO;
         }
         break;
@@ -340,7 +354,7 @@ void MEF_Manual()
             estadoActual = MOVIENDOSE;
             break;
         case RETROCEDER:
-            estadoActual = GIRANDO_180;
+            estadoActual = REVERSA;
             break;
         case GIRAR_IZQUIERDA:
             estadoActual = GIRANDO_IZQUIERDA;
@@ -580,9 +594,11 @@ void MEF_Accion_Manual()
         motorGirarIzquierda();
         flagMotor = 1;
         break;
-    case GIRANDO_180:
-        motorGirar180();
-        flagMotor = 1;
+    case REVERSA:
+        movimientoRuedaIzquierda = ATRAS;
+        movimientoRuedaDerecha = ATRAS;
+        printf("El robot retrocedió 25 cm\n");
+        flagRetrocedio = 1;
         break;
     case DETENIDO:
         // Se simula la detención de los motores
@@ -1043,7 +1059,10 @@ nodo *Secuencia_Inicio(void)
     distanciaCentro = distancia;
     distancia = 0;
     distanciaMaxima = distanciaCentro;
-    direccionMayorDistancia = 'C';
+    if (!hayObstaculo)
+    {
+        direccionMayorDistancia = 'C';
+    }
 
     servoMirarDerecha();
     hayObstaculo = Observar(inicial);
@@ -1080,6 +1099,9 @@ nodo *Secuencia_Inicio(void)
     case 'I':
         estadoActual = GIRANDO_IZQUIERDA;
         //proximo = adyacenteIzquierda;
+        break;
+    deafult:
+        estadoActual = GIRANDO_180;
         break;
     }
     servoMirarCentro();

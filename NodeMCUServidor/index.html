@@ -128,9 +128,7 @@
       Http.onreadystatechange = (e) => {
         if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
           habitaciones = Http.response;
-          console.log(habitaciones);
           for (habitacion of habitaciones) {
-            console.log(habitacion.nombre);
             var str;
             str += "<option>" + habitacion.nombre + "</option>"
             document.getElementById("seleccionHabitacion").innerHTML = str;
@@ -149,7 +147,7 @@
 
       var xLong;
       var yLong;
-      
+
       var nombreHabitacion = document.getElementById("seleccionHabitacion").value;
 
       const Http = new XMLHttpRequest();
@@ -181,7 +179,6 @@
           Http.onreadystatechange = (e) => {
             //console.log(Http.responseText);
             if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
-              console.log(Http.response);
               Http.response.forEach(element => {
                 console.log(element.x, element.y, element.estado);
                 x = element.x;
@@ -207,9 +204,44 @@
 
     }
 
-    function mapearHabitacion(){
+    function descargarCSV() {
+      var nombreHabitacion = document.getElementById("seleccionHabitacion").value;
+
+      const Http = new XMLHttpRequest();
+      var url = `http://localhost:3000/api/robotAspiradora/csv?nombreGrafo=${nombreHabitacion}`;
+      Http.responseType = 'blob';
+      Http.open("GET", url);
+
+
+      Http.onload = function (e) {
+        if (this.status == 200) {
+          // Create a new Blob object using the 
+          //response data of the onload object
+          var blob = new Blob([this.response], { type: 'blob' });
+          //Create a link element, hide it, direct 
+          //it towards the blob, and then 'click' it programatically
+          let a = document.createElement("a");
+          a.style = "display: none";
+          document.body.appendChild(a);
+          //Create a DOMString representing the blob 
+          //and point the link element towards it
+          let url = window.URL.createObjectURL(blob);
+          a.href = url;
+          a.download = "datos-" + nombreHabitacion + ".cvs";
+          //programatically click the link to trigger the download
+          a.click();
+          //release the reference to the file by revoking the Object URL
+          window.URL.revokeObjectURL(url);
+        };
+      };
+
+      Http.send();
+
+    }
+
+
+    function mapearHabitacion() {
       var nombreNuevaHabitacion = document.getElementById("nombreNuevaHabitacion").value;
-      console.log(nombreNuevaHabitacion);
       const Http = new XMLHttpRequest();
       var url = "http://localhost:3000/api/robotAspiradora/mapearHabitacion";
       var terminoMapeo;
@@ -217,18 +249,44 @@
       Http.open("PUT", url);
       Http.setRequestHeader('Content-Type', 'application/json');
       Http.send(JSON.stringify({ "nombre": nombreNuevaHabitacion }));
-      Http.onreadystatechange = (e) => {
-        if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
-          // Polling hasta que haya terminado de mapear la habitacion
-          url = "http://localhost:3000/api/robotAspiradora/mapearHabitacion";
-          Http.open("GET, url")
-          while(!TerminoMapeo){
-// HACER ESTO
+      // Se bloquean todos los controles hasta que termine de mapear
+      document.getElementById("seleccionHabitacion").disabled = true;
+      document.getElementById("switchAutomatico").disabled = true;
+      document.getElementById("switchAspirar").disabled = true;
+      document.getElementById("mapear").disabled = true;
+      document.getElementById("mostrarMapa").disabled = true;
+      document.getElementById("descargarCSV").disabled = true;
+      // Activa la alerta de mapeando
+      document.getElementById("alertaMapeando").hidden = false;
+      document.getElementById("alertaFinalizoMapeado").hidden = true;
+      // Se hace polling hasta que termine el mapeo
+      url = "http://localhost:3000/api/robotAspiradora/consultaEstadoMapeo";
+      var idInterval = setInterval(function () {
+        Http.open("GET", url);
+        Http.setRequestHeader('Content-Type', 'application/json');
+        Http.send();
+        Http.onreadystatechange = (e) => {
+          if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+            terminoMapeo = Http.response;
+            console.log(terminoMapeo);
+            if (terminoMapeo) {
+              // Cuando termina de mapear se actualiza la lista de habitaciones.
+              recuperarHabitaciones();
+              document.getElementById("alertaMapeando").hidden = true;
+              document.getElementById("alertaFinalizoMapeado").hidden = false;
+              // Vuelven a habilitarse los controles
+              document.getElementById("seleccionHabitacion").disabled = false;
+              document.getElementById("switchAutomatico").disabled = false;
+              document.getElementById("switchAspirar").disabled = false;
+              document.getElementById("mapear").disabled = false;
+              document.getElementById("mostrarMapa").disabled = false;
+              document.getElementById("descargarCSV").disabled = false;
+              clearInterval(idInterval);
+            }
           }
         }
-      }
+      }, 1000);
     }
-
 
     function switchAdelante() {
       var button_text = document.getElementById("Avanzar_button").value;
@@ -382,6 +440,15 @@
       <div class="col-md-6 col-lg-4 offset-md-3 offset-lg-4 principal">
         <h2>TDPII - Robot Aspiradora</h2>
         <hr>
+
+        <div id="alertaMapeando" class="alert alert-warning" role="alert" hidden>
+          Mapeando . . .
+        </div>
+
+        <div id="alertaFinalizoMapeado" class="alert alert-primary" role="alert" hidden>
+          ¡Mapeo completado!
+        </div>
+
         <div class="container-fluid">
           <div class="row">
             <div class="col-8 d-flex align-items-center">
@@ -416,12 +483,12 @@
           <div class="row">
             <div class="col-2 offset-3">
               <button id="boton1" onclick="switchDireccion(direccion.izquierda)" type="button"
-                class="btn btn-primary"><img src="icons/caret-left-fill.svg" alt="" width="32" height="32"
+                class="btn btn-primary"><img src="icons/arrow-counterclockwise.svg" alt="" width="32" height="32"
                   title="Bootstrap"></button>
             </div>
             <div class="col-2 offset-2">
               <button id="boton2" onclick="switchDireccion(direccion.derecha)" type="button"
-                class="btn btn-primary"><img src="icons/caret-right-fill.svg" alt="" width="32" height="32"
+                class="btn btn-primary"><img src="icons/arrow-clockwise.svg" alt="" width="32" height="32"
                   title="Bootstrap"></button>
             </div>
           </div>
@@ -434,6 +501,7 @@
         </div>
 
         <hr>
+
         <div class="input-group mb-3">
           <input id="nombreNuevaHabitacion" type="text" class="form-control" placeholder="Nueva habitación">
           <div class="input-group-append">
@@ -446,7 +514,10 @@
             <option selected>Habitaciones</option>
           </select>
           <div class="input-group-append">
-            <button class="btn btn-primary" id="mostrar_mapa" onclick="dibujarMapa()">Mostrar mapa</button>
+            <button class="btn btn-primary" id="mostrarMapa" onclick="dibujarMapa()">Mostrar mapa</button>
+          </div>
+          <div class="input-group-append">
+            <button class="btn btn-warning" id="descargarCSV" onclick="descargarCSV()">Descargar CSV</button>
           </div>
         </div>
 
@@ -456,7 +527,7 @@
             Your browser does not support the HTML5 canvas tag.</canvas></div>
 
 
-        
+
         <!-- <div class="d-flex justify-content-center">
           <img src="imagenes/mapa.png" width="300px" height="300px" style="align-self: center;">
         </div> -->

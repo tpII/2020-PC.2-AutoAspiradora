@@ -1,5 +1,5 @@
 const db = require("../modelos/index.js");
-const { estadoRobot } = require("./Estado.js");
+var estado= require("./Estado.js");
 const Grafo = db.grafo;
 
 module.exports = db;
@@ -21,6 +21,7 @@ async function create(req, res) {
         longitudY: req.body.yMax
     };
 
+    estado.resetMapeando();
     Grafo.create(grafo)
         .then(data => {
             res.send(data);
