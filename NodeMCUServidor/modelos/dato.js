@@ -3,6 +3,10 @@ const { Sequelize, DataTypes, Model } = require('sequelize');
 const Vertice = require('./vertice');
 const Grafo = require('./grafo');
 
+////////////////////////////////////////////////
+// Se define el modelo de dato de recorrido  //
+// para Sequelize                            //
+///////////////////////////////////////////////
 const Datos = sequelizeCon.define('datos', {
     xorigen: {
         type: DataTypes.INTEGER,
@@ -30,7 +34,5 @@ const Datos = sequelizeCon.define('datos', {
         type: DataTypes.STRING
     }
 });
-
-//Datos.belongsTo(Grafo);
 
 module.exports = Datos;

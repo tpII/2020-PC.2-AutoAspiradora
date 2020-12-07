@@ -17,6 +17,7 @@
 
 // 56 ranuras por segundo => 571.8 mm/s
 
+// Funciones que ejecutan los hilos que simulan los sensores
 void *funcion_sensor_ultrasonido(void *ptr);
 void *funcion_sensor_encoder_derecha(void *ptr);
 void *funcion_sensor_encoder_izquierda(void *ptr);
@@ -54,40 +55,72 @@ typedef enum
     GIRANDO_180,
     REVERSA,
     DETENIDO
-} estado_automatico;
+} estado_automatico; //Estado de la maquina de estados
 
+// Funciones para la máquina de estados
+
+// Controla el estado de la aspiradora (si pasa de manual a automatico o viceversa)
 void MEF_Modo_Aspiradora();
+// Controla los cambios de estado de la aspiradora cuando está en modo automático
 void MEF_Automatico();
+// Controla los cambios de estado de la aspiradora cuando está en modo manual
 void MEF_Manual();
+// Elige que funcion debe ejecutarse dependiendo si la aspiradora esta en modo manual o automático
 nodo *MEF_Accion_Modo(nodo *);
+// En modo automático, ejecuta la accion dependiendo del estado del robot
 nodo *MEF_Accion_Automatico(nodo *);
+// En modo manual, ejecuta la accion dependiendo del estado del robot
 void MEF_Accion_Manual();
 
+//Detiene las ruedas del robot
 void Detener();
-void MoverAdelante();
-void MoverPosicion();
+//Indica a las ruedas que deben moverce hacia adelante
+void Mover_Adelante();
+//Se controla las posiciones que se movio el robot en las coordenas x y
+void Mover_Posicion();
+//Indica al thread del ultrasonido que debe medir la distanccia, obtiene si hay obstaculo o no
+//crea el vertice de ser necesario, guarda el tramo de ser necesario.
 int Observar();
-void servoMirarCentro();
-void servoMirarDerecha();
-void servoMirarIzquierda();
-void motorGirarIzquierda();
-void motorGirarDerecha();
-void motorGirar180();
-void contar_interrupciones(int cont);
+//Se mueve el servomotor al centro con respecto al robot
+void Servo_Mirar_Centro();
+//Se mueve el servomotor al la derecha con respecto al robot
+void Servo_Mirar_Derecha();
+//Se mueve el servomotor a la izquierda con respecto al robot
+void Servo_Mirar_Izquierda();
+//Se mueve las ruedas para realizar un giro a la izquierda
+void Motor_Girar_Izquierda();
+//Se mueve las ruedas para realizar un giro a la derecha
+void Motor_Girar_Derecha();
+//Se mueve las ruedas para realizar un giro de 180 grados
+void Motor_Girar_180();
+//Se disminuye la cantidad de interrupciones restantes para realizar un giro hasta llegar a 0
+void Contar_Interrupciones(int cont);
+//Realiza el algoritmo de inicio del robot
 nodo *Secuencia_Inicio(void);
-nodo *crearVertice(nodo *);
-void delay(void);
-coordenadas coordenadasAyacente(int, int);
-direccion direccionAdyacente();
-direccion direccionAdyacenteAnterior();
-void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior);
-void recursion(nodo *actual, nodo *anterior);
-void termino_tramo(nodo *actual);
+//Se crea un verice en el grafo
+nodo *Crear_Vertice(nodo *);
+//Funcion que se llama cada vez que se necesita hacer un delay, utilizado solo para generar un retardo
+//para llegar a leer los mensajes que indican las acciones que realiza el robot
+void Delay(void);
+//Devuelve la coordenada siguiente a donde esta mirando el robot
+coordenadas Coordenadas_Adyacente(int, int);
+//Devuelve hacia donde mira el robot, teniendo en cuenta la posicion del robot y la posicion
+//del servomotor con respecto al robot
+direccion Direccion_Adyacente();
+//Se lo llama cuando vuelve de la recursion y ejecuta la accion correspondiente teniendo en
+//cuenta la accion que realizo antes de entrar a la recursion
+void Retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior);
+//Entra a la recursion
+void Recursion(nodo *actual, nodo *anterior);
+//Se envian los datos del tramo entre obstaculos al servidor
+void Termino_Tramo(nodo *actual);
 
 // En esta variable se guarda el estado que llega del servidor
 struct estadoRobot estadoRobot;
 
 // Matriz que representa la habitación
+// Es ultilizada por el ultrasonico para devolver datos que representen la realidad
+// y poder verificar los resultados.
 // 0 -> lugar accesible, 1 -> obstáculo
 int habitacion[10][10] =
     {
@@ -101,6 +134,8 @@ int habitacion[10][10] =
         {1, 1, 1, 1, 0, 0, 1, 1, 0, 1},
         {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+
+// Posicion del robot dentro de la matriz
 int x = 1;
 int y = 1;
 int direccionServo = 0;
@@ -125,30 +160,36 @@ int iniciaRecorrido = 0; //Flag que indica si se salio de la secuencia de inicio
 int distanciaTramo;
 int velocidadTramo;
 vertice verticeInicioTramo;
-char *nombreHabitacion;
+char *nombreHabitacion; //Nombre que tendrá la habitacion a mapear
 
+// Variable utilizada con libCURL para hacer los pedidos HTTP al servidor
 CURL *curl;
 
+// Representan el estado de las ruedas
 movimiento movimientoRuedaDerecha = ATRAS;
 movimiento movimientoRuedaIzquierda = ADELANTE;
 
-//Variables de las maquinas de estado
-int hayObstaculo;
+int hayObstaculo; // Utilizada cuando el ultrasonico mide la distancia
+
+// Variables de las maquinas de estado en modo automático
 estado_automatico estadoAnterior;
 estado_automatico estadoActual;
 estado_automatico estadoActualModo;
 
+// Flags utilizados para modificar los estados de la MEF
 int flagServo;
 int flagMotor;
 int flagAvanzo = 0;
 int flagRetrocedio = 0;
 
+// URLs a las que se mandan los pedidos HTTP
 char *url_info_grafo = "http://localhost:3000/api/robotAspiradora/grafos";
 char *url_vertices = "http://localhost:3000/api/robotAspiradora/vertices";
 char *url_datos_recorridos = "http://localhost:3000/api/robotAspiradora/dato";
 char *url_consultar_estado = "http://localhost:3000/api/robotAspiradora/consultaEstado";
 char *url_consultar_habitacion = "http://localhost:3000/api/robotAspiradora/consultaNombre";
 
+// Semaforo utilizado para detectar cuándo termino de medir distancia el ultrasónico
 sem_t semaforoDistancia;
 
 int Ultrasonico_Trigger(void)
@@ -168,14 +209,16 @@ int Ultrasonico_Trigger(void)
     return obstaculo;
 }
 
+// Grafo que se va a generar con los vertices de la habitacion
 grafo grafoMapa;
+
+// Programa principal
 void main()
 {
 
-    int ret = 0;
-
     srand(time(NULL));
 
+    // Hilos de sensores
     pthread_t ultrasonido;
     pthread_t ruedaDer;
     pthread_t ruedaIzq;
@@ -186,77 +229,81 @@ void main()
     char *mensaje2 = "Thread 2";
     char *mensaje3 = "Thread 3";
 
-    int cant;
-
     struct estadoRobot estadoAnterior;
 
     // Se inicializa la variable para comunicarnos con el servidor
     curl = configurar_conexion();
-    cerrar_conexion(curl);
-    curl = configurar_conexion();
+
+    // Nodo que almacenará el vertice inicial
     nodo *inicial;
 
-    ret = pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido, (void *)mensaje);
+    // Se crean los hilos que simulan los sensores
+    pthread_create(&ultrasonido, NULL, funcion_sensor_ultrasonido, (void *)mensaje);
     pthread_create(&ruedaDer, NULL, funcion_sensor_encoder_derecha, (void *)mensaje2);
     pthread_create(&ruedaIzq, NULL, funcion_sensor_encoder_izquierda, (void *)mensaje3);
 
     printf("La aspiradora entra en funcionamiento\n");
+    printf("-------------------------------------\n");
+    // Se consulta el estado inicial del robot
     consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
     if (estadoRobot.modoAutomatico)
     {
-        printf("El robot está en modo automático\n");
+        printf("- El robot inicia en modo automático\n");
         estadoActual = BARRIDO;
         estadoActualModo = AUTOMATICO;
     }
     else
     {
-        printf("El robot está en modo manual\n");
+        printf("- El robot inicia en modo manual\n");
         estadoActual = DETENIDO;
         estadoActualModo = MANUAL;
     }
-    // pthread_join(ultrasonido, NULL);
-    // pthread_join(ruedaDer, NULL);
-    // pthread_join(ruedaIzq, NULL);
 
     // While principal
     while (1)
     {
         consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
+        // Si cambia el estado del ventilador
         if (estadoRobot.ventiladorEncendido != estadoAnterior.ventiladorEncendido)
         {
             if (estadoRobot.ventiladorEncendido == 1)
             {
-                printf("Robot comienza a aspirar\n");
+                printf("- Robot comienza a aspirar\n");
             }
             else
             {
-                printf("Robot deja de aspirar\n");
+                printf("- Robot deja de aspirar\n");
             }
         }
+        // Si cambia el modo de la aspiradora
         if (estadoRobot.modoAutomatico != estadoAnterior.modoAutomatico)
         {
             if (estadoRobot.modoAutomatico == 1)
             {
                 estadoActual = BARRIDO;
                 estadoActualModo = AUTOMATICO;
-                printf("PASA A MODO AUTOMATICO\n");
+                printf("- El robot pasa a modo automatico\n");
             }
             else
             {
-                printf("PASA A MODO MANUAL\n");
+                printf("- El robot pasa a modo manual\n");
                 estadoActualModo = MANUAL;
                 estadoActual = DETENIDO;
             }
         }
 
+        // La aspiradora está en modo manual
         if (!estadoRobot.modoAutomatico)
         {
             MEF_Modo_Aspiradora();
             MEF_Accion_Modo(NULL);
         }
 
+        // El robot esta en modo automatico y debe comenzar a mapear
         if ((estadoRobot.modoAutomatico) && (estadoRobot.mapeando) && (!estadoAnterior.mapeando))
         {
+            direccionRobot = 0;
+            direccionServo = 0;
             // Si ya hay un grafo en memoria, cuando se quiere crear uno nuevo se libera el anterior
             while (grafoMapa.lista.cabeza != NULL)
             {
@@ -266,17 +313,20 @@ void main()
             }
 
             consultar_nombre_habitacion(curl, url_consultar_habitacion, &nombreHabitacion);
-            printf("PASA A MODO AUTOMATICO -> MAPEANDO\n");
-            printf("debug1");
-            printf("%s", nombreHabitacion);
-            printf("debug2");
+            printf("-------------------------------------\n");
+            printf("Se comienza el mapeado de la habitacion\n");
+            printf("-------------------------------------\n");
             inicializar_grafo(&grafoMapa, nombreHabitacion);
             inicial = Secuencia_Inicio();
             iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
             verticeInicioTramo = inicial->actual; //Se guarda el vertice de inicio del tramo
             distanciaTramo = 0;                   //Se inicializa la distancia del tramo
-            recursion(inicial, NULL);
+            // Se hace el primer llamado a la función recursiva
+            // donde se llenará el grafo, con el vertice inicial
+            Recursion(inicial, NULL);
+            printf("-------------------------------------\n");
             printf("Mapeado de la habitación finalizado\n");
+            printf("-------------------------------------\n");
             estadoRobot.mapeando = 0;
             consultar_estado_robot(curl, url_consultar_estado, &estadoRobot);
             x = 1;
@@ -289,14 +339,17 @@ void main()
 
             // Se envía la información del grafo al servidor
             enviar_info_grafo(curl, grafoMapa, url_info_grafo);
+
+            // Se imprime el grafo
+            printf("Grafo final:\n");
+            printf("-------------------------------------\n");
+            imprimir_grafo(grafoMapa);
+            printf("-------------------------------------\n");
         }
         estadoAnterior = estadoRobot;
+        //Se espera 1 segundo para enviar denuevo el request al servidor para obtener el estado
         usleep(1000000);
     }
-    // MEF_Modo_Aspiradora();
-    // MEF_Accion_Modo(inicial);
-
-    //printf("SE ALCANZO EL OBSTÁCULO \n");
 }
 
 void MEF_Modo_Aspiradora()
@@ -320,35 +373,35 @@ void MEF_Manual()
     switch (estadoActual)
     {
     case MOVIENDOSE:
-        if (flagAvanzo)
+        if (flagAvanzo) //Se espera a que se haya avanzado una posicion
         {
             flagAvanzo = 0;
             estadoActual = DETENIDO;
         }
         break;
     case GIRANDO_DERECHA:
-        if (flagMotor)
+        if (flagMotor) //Se espera a que se haya detenido el motor
         {
             flagMotor = 0;
             estadoActual = DETENIDO;
         }
         break;
     case GIRANDO_IZQUIERDA:
-        if (flagMotor)
+        if (flagMotor) //Se espera a que se haya detenido el motor
         {
             flagMotor = 0;
             estadoActual = DETENIDO;
         }
         break;
     case REVERSA:
-        if (flagRetrocedio)
+        if (flagRetrocedio) //Se espera a que se haya retrocedid
         {
             flagRetrocedio = 0;
             estadoActual = DETENIDO;
         }
         break;
     case DETENIDO:
-        switch (estadoRobot.direccionManual)
+        switch (estadoRobot.direccionManual) //Se evalua la accion que debe realizar el robot
         {
         case AVANZAR:
             estadoActual = MOVIENDOSE;
@@ -387,7 +440,6 @@ void MEF_Automatico()
         }
         break;
     case BARRIDO:
-        // printf("Estado: Barrido\n");
         if (rand() % 2 == 0)
         {
             estadoAnterior = estadoActual;
@@ -401,7 +453,6 @@ void MEF_Automatico()
 
         break;
     case ESQUIVANDO:
-        // printf("Estado: Esquivando\n");
         distancia = 0;
         estadoAnterior = estadoActual;
         if (hayObstaculo)
@@ -411,8 +462,7 @@ void MEF_Automatico()
 
         break;
     case MIRANDO_DERECHA:
-        // printf("Estado: Mirando derecha\n");
-        if (flagServo)
+        if (flagServo) //Se espera a que se detenga el servomotor
         {
             distanciaDerecha = distancia;
             distancia = 0;
@@ -469,7 +519,6 @@ void MEF_Automatico()
 
         break;
     case MIRANDO_IZQUIERDA:
-        // printf("Estado: Mirando izquierda\n");
         if (flagServo)
         {
             distanciaIzquierda = distancia;
@@ -550,7 +599,6 @@ void MEF_Automatico()
             else
             {
                 estadoAnterior = estadoActual;
-                //estadoActual = MOVIENDOSE;
                 estadoActual = 40;
             }
         }
@@ -587,11 +635,11 @@ void MEF_Accion_Manual()
         flagAvanzo = 1;
         break;
     case GIRANDO_DERECHA:
-        motorGirarDerecha();
+        Motor_Girar_Derecha();
         flagMotor = 1;
         break;
     case GIRANDO_IZQUIERDA:
-        motorGirarIzquierda();
+        Motor_Girar_Izquierda();
         flagMotor = 1;
         break;
     case REVERSA:
@@ -617,10 +665,14 @@ nodo *MEF_Accion_Automatico(nodo *actual)
     nodo *proximo = NULL;
     int posiblesCaminos = 4;
 
+    printf("--------------------------");
+    printf("Pos X: %d Pos Y: %d\n",x,y);
+    printf("--------------------------");
+
     switch (estadoActual)
     {
     case MOVIENDOSE:
-        MoverAdelante();
+        Mover_Adelante();
         posiciones--;
         actual->actual.estado = Visitado;
         enviar_vertices_grafo(curl, actual->actual, grafoMapa.nombre, url_vertices);
@@ -628,7 +680,7 @@ nodo *MEF_Accion_Automatico(nodo *actual)
         // Si hay obstaculo vuelve con el mismo vertice y si no hay obstáculo devuelve el próximo vertice
         if (!hayObstaculo)
         {
-            proximo = actual->adyacentes[direccionAdyacente()];
+            proximo = actual->adyacentes[Direccion_Adyacente()];
         }
         else
         {
@@ -649,41 +701,41 @@ nodo *MEF_Accion_Automatico(nodo *actual)
         break;
     case MIRANDO_DERECHA:
         printf("MIRANDO_DERECHA\n");
-        servoMirarDerecha();
+        Servo_Mirar_Derecha();
         hayObstaculo = Observar(actual);
         proximo = actual;
         // Vuelve a colocar el servomotor al centro
-        servoMirarCentro();
+        Servo_Mirar_Centro();
         flagServo = 1;
         break;
     case MIRANDO_IZQUIERDA:
         printf("MIRANDO_IZQUIERDA\n");
-        servoMirarIzquierda();
+        Servo_Mirar_Izquierda();
         hayObstaculo = Observar(actual);
         proximo = actual;
         // Vuelve a colocar el servomotor al centro
-        servoMirarCentro();
+        Servo_Mirar_Centro();
         flagServo = 1;
         break;
     case GIRANDO_IZQUIERDA:
         contPrueba = 0;
-        motorGirarIzquierda();
+        Motor_Girar_Izquierda();
         printf("Se generon %d interrupciones\n", contPrueba);
-        proximo = actual->adyacentes[direccionAdyacente()];
+        proximo = actual->adyacentes[Direccion_Adyacente()];
         // Detener();
         flagMotor = 1;
         break;
     case GIRANDO_DERECHA:
         contPrueba = 0;
-        motorGirarDerecha();
+        Motor_Girar_Derecha();
         printf("Se generon %d interrupciones\n", contPrueba);
-        proximo = actual->adyacentes[direccionAdyacente()];
+        proximo = actual->adyacentes[Direccion_Adyacente()];
         // Detener();
         flagMotor = 1;
         break;
     case GIRANDO_180:
         contPrueba = 0;
-        motorGirar180();
+        Motor_Girar_180();
         printf("Se generon %d interrupciones\n", contPrueba);
         flagMotor = 1;
         hayObstaculo = Observar(actual);
@@ -691,18 +743,13 @@ nodo *MEF_Accion_Automatico(nodo *actual)
         {
             hayObstaculo180 = 0;
             // Si no hay obstaculo pasamos el vertice anterior
-            proximo = actual->adyacentes[direccionAdyacente()];
-            // if (proximo->actual.estado == Visitado)
-            // {
-            //     return;
-            // }
+            proximo = actual->adyacentes[Direccion_Adyacente()];
         }
         else
         {
             hayObstaculo180 = 1;
             proximo = actual;
         }
-        // Detener();
         retornando = 1;
         break;
     default:
@@ -710,20 +757,11 @@ nodo *MEF_Accion_Automatico(nodo *actual)
     }
 
     int i;
-    // for(i = 0; i < 4; i++) {
-    //     if(actual->adyacentes[i] != Visitado)
-    //     MEF_Modo_Aspiradora();
-    //     MEF_Accion_Modo(proximo);
-    //     posiblesCaminos--;
-    // }
-    // MEF_Modo_Aspiradora();
-    // MEF_Accion_Modo(proximo);
     return proximo;
 }
 
 void *funcion_sensor_ultrasonido(void *ptr)
 {
-    // CON LAS POSICIONES X E Y Y LA DIRECCION, SABER IS HAY OBSTACULO O NO USANDO LA MATRIZ
 
     char *mensaje;
     mensaje = (char *)ptr;
@@ -736,7 +774,6 @@ void *funcion_sensor_ultrasonido(void *ptr)
             // Utiliza la matrix que representa la habitación para calcular la distancia
             int xAux = x;
             int yAux = y;
-            printf("x: %d, y: %d \n", xAux, yAux);
             int posicionesLibres = 0;
             // Se hace una cuenta para calcular hacia que lugar de la matriz esta observando
             int direccionTotal = (direccionRobot + direccionServo) % 360;
@@ -747,7 +784,6 @@ void *funcion_sensor_ultrasonido(void *ptr)
             // El sensor de ultrasonido alcanza como máximo 400cm (16 posiciones).
             case 0:
                 // Esta observando  hacia derecha en la matriz
-                printf("0 GRADOS\n");
                 xAux++;
                 while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
                 {
@@ -756,7 +792,6 @@ void *funcion_sensor_ultrasonido(void *ptr)
                 }
                 break;
             case 90:
-                printf("90 GRADOS\n");
                 // Esta observando hacia arriba en la matriz
                 yAux--;
                 while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
@@ -766,7 +801,6 @@ void *funcion_sensor_ultrasonido(void *ptr)
                 }
                 break;
             case 180:
-                printf("180 GRADOS\n");
                 // Esta observando hacia izquierda en la matriz
                 xAux--;
                 while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
@@ -776,7 +810,6 @@ void *funcion_sensor_ultrasonido(void *ptr)
                 }
                 break;
             case 270:
-                printf("270 GRADOS\n");
                 // Esta observando hacia abajo en la matriz
                 yAux++;
                 while ((habitacion[yAux][xAux] != 1) && (posicionesLibres < 16))
@@ -801,7 +834,6 @@ void *funcion_sensor_encoder_derecha(void *ptr)
     char *mensaje;
     int cant;
     mensaje = (char *)ptr;
-    // printf("%s \n", (char *)ptr);
     while (1)
     {
         //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
@@ -810,7 +842,6 @@ void *funcion_sensor_encoder_derecha(void *ptr)
             encoderState_derecha = 1 - encoderState_derecha; //Se hace un toggle entre 1 y 0
             if (encoderState_derecha == 0)
                 contPrueba++;
-            // printf("Rueda derecha: %d\n", encoderState_derecha);
             usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
         }
     }
@@ -820,7 +851,6 @@ void *funcion_sensor_encoder_izquierda(void *ptr)
 {
     char *mensaje;
     mensaje = (char *)ptr;
-    //printf("%s \n", (char *)ptr);
     while (1)
     {
         //Si la rueda se mueve en alguna direccion se modifica el valor que devuelve el encoder
@@ -830,7 +860,6 @@ void *funcion_sensor_encoder_izquierda(void *ptr)
             encoderState_izquierda = 1 - encoderState_izquierda; //Se hace un toggle entre 1 y 0
             if (encoderState_izquierda == 0)
                 contPrueba++;
-            // printf("Rueda izquierda: %d\n", encoderState_izquierda);
             usleep(8928); //Se espera 0.008928 seg, esto cambiaria segun la velocidad de la rueda
         }
     }
@@ -840,11 +869,11 @@ void Detener()
 {
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
-    printf("Detenido\n");
-    delay();
+    printf("- Se detuvo el robot\n");
+    Delay();
 }
 
-void MoverAdelante()
+void Mover_Adelante()
 {
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = ADELANTE;
@@ -852,27 +881,23 @@ void MoverAdelante()
     switch (direccionRobot)
     {
     case 0:
-        printf("CASO 0\n");
         x++;
-        MoverPosicion();
+        Mover_Posicion();
         break;
 
     case 90:
-        printf("CASO 90\n");
         y--;
-        MoverPosicion();
+        Mover_Posicion();
         break;
 
     case 180:
-        printf("CASO 180\n");
         x--;
-        MoverPosicion();
+        Mover_Posicion();
         break;
 
     case 270:
-        printf("CASO 270\n");
         y++;
-        MoverPosicion();
+        Mover_Posicion();
         break;
 
     default:
@@ -880,35 +905,32 @@ void MoverAdelante()
     }
     // Incrementa la distancia en 25cm;
     distanciaTramo += 25;
-    printf("Avanzando\n");
-    delay();
+    printf("- Avanzando . . .\n");
+    Delay();
 }
 
-void MoverPosicion()
+void Mover_Posicion()
 {
     int cont = INT_AVANZAR_POSICION;
 
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = ADELANTE;
-    //delay();
-    contar_interrupciones(cont);
-
-    // Se crea el nodo en el grafo
-
-    printf("El robot avanzó una posicion\n");
-    delay();
+    Contar_Interrupciones(cont);
+    printf("- El robot avanzó una posicion\n");
+    Delay();
 }
 
 int Observar(nodo *actual)
 {
     int visitado = 0;
     int obs;
-    printf("Observando\n");
-    delay();
+    printf("- Sensor ultrasónico observando . . .\n");
+    Delay();
     obs = Ultrasonico_Trigger();
-    if (actual->adyacentes[direccionAdyacente()] != NULL)
+    // Si el proximo vertice YA EXISTE y esta visitado se lo coloca como obstáculo, para que no avance
+    if (actual->adyacentes[Direccion_Adyacente()] != NULL)
     {
-        if (actual->adyacentes[direccionAdyacente()]->actual.estado == Visitado)
+        if (actual->adyacentes[Direccion_Adyacente()]->actual.estado == Visitado)
         {
             obs = 1;
         }
@@ -916,14 +938,15 @@ int Observar(nodo *actual)
     else
     {
         // Si el vertice no existe, lo crea
-        crearVertice(actual);
+        Crear_Vertice(actual);
         printf("creo el vertice\n");
     }
 
+    // Si hay obstáculo:
     if (obs)
     {
-        printf("Hay obstaculo\n");
-        printf("Distancia: %f\n", distancia);
+        printf("- Hay un obstaculo proximo\n");
+        printf("Distancia al obstáculo: %f cm\n", distancia);
         // Si el servo esta mirando al centro ,no esta en la posicion inicial y no es un
         // vertice visidado (inicio recorrido) quiere decir que estaba avanzando
         // y encontró un obstáculo, por lo que lo envía al servidor
@@ -932,90 +955,88 @@ int Observar(nodo *actual)
              (verticeInicioTramo.coordenadas.y != actual->actual.coordenadas.y)))
         {
             // Envia los datos del tramo realizado al servidor
-            termino_tramo(actual);
+            Termino_Tramo(actual);
         }
         return 1;
     }
     else
     {
-        printf("No hay obstaculo\n");
-        printf("Distancia: %f\n", distancia);
+        printf("- No hay obstaculo inminente\n");
+        printf("Distancia al proximo obstáculo: %f cm\n", distancia);
         return 0;
     }
-    delay();
+    Delay();
 }
 
-void servoMirarCentro()
+void Servo_Mirar_Centro()
 {
-    printf("Girando servo al centro\n");
-    delay();
-    printf("Servo girado al centro\n");
-    delay();
+    printf("- Girando servo al centro\n");
+    Delay();
+    printf("- Servo girado al centro\n");
+    Delay();
     direccionServo = 0;
 }
 
-void servoMirarDerecha()
+void Servo_Mirar_Derecha()
 {
-    printf("Girando servo a derecha\n");
-    delay();
-    printf("Servo girado a derecha\n");
-    delay();
+    printf("- Girando servo a derecha\n");
+    Delay();
+    printf("- Servo girado a derecha\n");
+    Delay();
     direccionServo = 270;
 }
 
-void servoMirarIzquierda()
+void Servo_Mirar_Izquierda()
 {
-    printf("Girando servo a izquierda\n");
-    delay();
-    printf("Servo girado a izquierda\n");
-    delay();
+    printf("- Girando servo a izquierda\n");
+    Delay();
+    printf("- Servo girado a izquierda\n");
+    Delay();
     direccionServo = 90;
 }
 
-void motorGirarIzquierda()
+void Motor_Girar_Izquierda()
 {
     int cont = INT_GIRO_90;
-    printf("Girando robot a izquierda\n");
+    printf("- Girando robot a izquierda\n");
     movimientoRuedaIzquierda = ATRAS;
     movimientoRuedaDerecha = QUIETO;
-    //delay();
-    contar_interrupciones(cont);
+    Contar_Interrupciones(cont);
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
-    printf("Robot girado a izquierda\n");
+    printf("- Robot girado a izquierda\n");
     direccionRobot = (direccionRobot + 90) % 360;
-    delay();
+    Delay();
 }
 
-void motorGirarDerecha()
+void Motor_Girar_Derecha()
 {
     int cont = INT_GIRO_90;
-    printf("Girando robot a derecha\n");
+    printf("- Girando robot a derecha\n");
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
-    //delay();
-    contar_interrupciones(cont);
+    Contar_Interrupciones(cont);
     movimientoRuedaIzquierda = QUIETO;
     movimientoRuedaDerecha = QUIETO;
-    printf("Robot girado a derecha\n");
+    printf("- Robot girado a derecha\n");
     direccionRobot = (direccionRobot + 270) % 360;
-    delay();
+    Delay();
 }
 
-void motorGirar180()
+void Motor_Girar_180()
 {
-    printf("Girando robot 180º\n");
+    printf("- Girando robot 180º\n");
     int cont = INT_GIRO_180;
     movimientoRuedaIzquierda = ADELANTE;
     movimientoRuedaDerecha = QUIETO;
-    contar_interrupciones(cont);
-    //delay();
-    printf("Robot girado 180º\n");
+    Contar_Interrupciones(cont);
+    //Delay();
+    printf("- Robot girado 180º\n");
     direccionRobot = (direccionRobot + 180) % 360;
-    delay();
+    Delay();
 }
 
-void contar_interrupciones(int cont)
+void Contar_Interrupciones(int cont)
 {
     while (cont != 0)
     {
@@ -1041,7 +1062,7 @@ nodo *Secuencia_Inicio(void)
     nodo *adyacenteDerecha;
     nodo *adyacenteIzquierda;
 
-    servoMirarCentro();
+    Servo_Mirar_Centro();
 
     // Se crea el vertice inicial
     v.coordenadas.x = x;
@@ -1052,7 +1073,7 @@ nodo *Secuencia_Inicio(void)
     // Se incrementa la cantidad de vertices del grafo
     grafoMapa.vertices++;
     // Se envía el vertice al servidor
-    printf("%s\n", grafoMapa.nombre);
+    printf("Se va a mapear la habitacion: %s\n", grafoMapa.nombre);
     enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
 
     hayObstaculo = Observar(inicial);
@@ -1064,7 +1085,7 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'C';
     }
 
-    servoMirarDerecha();
+    Servo_Mirar_Derecha();
     hayObstaculo = Observar(inicial);
     distanciaDerecha = distancia;
     distancia = 0;
@@ -1074,7 +1095,7 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'D';
     }
 
-    servoMirarIzquierda();
+    Servo_Mirar_Izquierda();
     hayObstaculo = Observar(inicial);
     distanciaIzquierda = distancia;
     distancia = 0;
@@ -1088,36 +1109,30 @@ nodo *Secuencia_Inicio(void)
     {
     case 'C':
         estadoActual = MOVIENDOSE;
-        //proximo = adyacenteCentro;
         break;
 
     case 'D':
         estadoActual = GIRANDO_DERECHA;
-        //proximo = adyacenteDerecha;
         break;
 
     case 'I':
         estadoActual = GIRANDO_IZQUIERDA;
-        //proximo = adyacenteIzquierda;
         break;
     deafult:
         estadoActual = GIRANDO_180;
         break;
     }
-    servoMirarCentro();
-
-    printf("IMPRIMIMOS EL GRAFO A VER COMO ESTA\n");
-    printf("===================================\n");
+    Servo_Mirar_Centro();
 
     return inicial;
 }
 
-void delay(void)
+void Delay(void)
 {
     usleep(20);
 }
 
-coordenadas coordenadasAyacente(int xAux, int yAux)
+coordenadas Coordenadas_Adyacente(int xAux, int yAux)
 {
     coordenadas coordenadasAdyacente;
     int direccionTotal = (direccionRobot + direccionServo) % 360;
@@ -1146,7 +1161,7 @@ coordenadas coordenadasAyacente(int xAux, int yAux)
     return coordenadasAdyacente;
 }
 
-direccion direccionAdyacente()
+direccion Direccion_Adyacente()
 {
     int direccion;
     int direccionTotal = (direccionRobot + direccionServo) % 360;
@@ -1157,35 +1172,13 @@ direccion direccionAdyacente()
     return direccion;
 }
 
-direccion direccionAdyacenteAnterior()
-{
-    int direccion;
-    int direccionTotal = (direccionRobot + direccionServo) % 360;
-
-    switch (direccionTotal)
-    {
-    case 0:
-        return 2;
-        break;
-    case 90:
-        return 3;
-        break;
-    case 180:
-        return 0;
-        break;
-    case 270:
-        return 1;
-        break;
-    }
-}
-
-nodo *crearVertice(nodo *actual)
+nodo *Crear_Vertice(nodo *actual)
 {
     vertice v;
     nodo *adyacente;
     int hayObstaculo;
     // Se crea el proximo vertice
-    v.coordenadas = coordenadasAyacente(x, y);
+    v.coordenadas = Coordenadas_Adyacente(x, y);
     if (hayObstaculo)
     {
         v.estado = Inaccesible;
@@ -1195,7 +1188,7 @@ nodo *crearVertice(nodo *actual)
         v.estado = NoVisitado;
     }
 
-    if ((actual->adyacentes[direccionAdyacente()]) == NULL)
+    if ((actual->adyacentes[Direccion_Adyacente()]) == NULL)
     {
         // Se agrega al grafo
         adyacente = agregar_vertice(&grafoMapa, v);
@@ -1212,90 +1205,68 @@ nodo *crearVertice(nodo *actual)
     }
     else
     {
-        adyacente = actual->adyacentes[direccionAdyacente()];
+        adyacente = actual->adyacentes[Direccion_Adyacente()];
     }
-
-    // Se imprime el grafo para ver como queda
-    imprimir_grafo(grafoMapa);
 
     return adyacente;
 }
 
-void recursion(nodo *actual, nodo *anterior)
-{
-
+void Recursion(nodo *actual, nodo *anterior)
+{   
     nodo *proximo = NULL;
     estado_automatico estadoRecursion = estadoActual;
     int i;
 
-    printf("LLAMADA A LA RECURSION CON NODO ACTUAL: X: %d Y: %d Y ESTADO: %d\n", actual->actual.coordenadas.x, actual->actual.coordenadas.y, estadoRecursion);
-
     proximo = MEF_Accion_Modo(actual);
     MEF_Modo_Aspiradora();
+    // Si el robot esta volviendo de la recursion, por el camino que fue realizando
     if (!retornando)
     {
         // Si el proximo vertice == actual, se envia el actual y anterior, para que no se pierda el anterior
         if (proximo == actual)
         {
-            recursion(actual, anterior);
+            Recursion(actual, anterior);
         }
         else
         {
-            recursion(proximo, actual);
+            Recursion(proximo, actual);
         }
-        printf("Volvio a la recursion que tiene x actual: %d y actual: %d y estado: %d\n", actual->actual.coordenadas.x, actual->actual.coordenadas.y, estadoRecursion);
     }
     if (retornando)
     {
         if (((estadoRecursion == GIRANDO_DERECHA) || (estadoRecursion == GIRANDO_IZQUIERDA) || (estadoRecursion == MOVIENDOSE)) && (actual != NULL))
         {
-            for (i = 0; i < 2; i++)
+            // Revisa el camino derecho
+            Servo_Mirar_Derecha();
+            hayObstaculo = Observar(actual);
+            // Vuelve a colocar el servomotor al centro
+            Servo_Mirar_Centro();
+            if (!hayObstaculo)
             {
-                switch (i)
-                {
-                case 0:
-                    printf("MIRANDO_DERECHA FOR\n");
-                    servoMirarDerecha();
-                    hayObstaculo = Observar(actual);
-                    // Vuelve a colocar el servomotor al centro
-                    servoMirarCentro();
-                    if (!hayObstaculo)
-                    {
-                        retornando = 0;
-                        estadoActual = GIRANDO_DERECHA;
-                        recursion(actual, anterior);
-                    }
-                    break;
-                case 1:
-                    printf("MIRANDO_IZQUIERDA FOR\n");
-                    servoMirarIzquierda();
-                    hayObstaculo = Observar(actual);
-                    // Vuelve a colocar el servomotor al centro
-                    servoMirarCentro();
-                    if (!hayObstaculo)
-                    {
-                        retornando = 0;
-                        estadoActual = GIRANDO_IZQUIERDA;
-                        recursion(actual, anterior);
-                    }
-                    break;
-                default:
-                    break;
-                }
+                retornando = 0;
+                estadoActual = GIRANDO_DERECHA;
+                Recursion(actual, anterior);
             }
-            retorna(estadoRecursion, actual, anterior);
+            // Revisa el camino izquierdo
+            Servo_Mirar_Izquierda();
+            hayObstaculo = Observar(actual);
+            // Vuelve a colocar el servomotor al centro
+            Servo_Mirar_Centro();
+            if (!hayObstaculo)
+            {
+                retornando = 0;
+                estadoActual = GIRANDO_IZQUIERDA;
+                Recursion(actual, anterior);
+            }
+            Retorna(estadoRecursion, actual, anterior);
         }
     }
-    printf("Vuelve de la recursion con:\n");
-    printf("X: %d Y: %d\n", actual->actual.coordenadas.x, actual->actual.coordenadas.y);
-    printf("x real: %d, y real: %d\n", x, y);
-    printf("Estado Recursion: %d \n", estadoRecursion);
     return;
 }
 
-void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
+void Retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
 {
-    printf("RETORNANDO: ");
+    printf("CAMINO SIN SALIDA, RETORNANDO\n");
     int xAux;
     int yAux;
     switch (estadoRecursion)
@@ -1303,8 +1274,7 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
     // Si el robot estaba moviendose, al volver de la recursión debe moverse en
     // la nueva dirección, que será la opuesta a la que tenía.
     case MOVIENDOSE:
-        printf("Mueve adelante\n");
-        MoverAdelante();
+        Mover_Adelante();
         break;
     // Si el robot estaba haciendo un giro a derecha o izquierda, al volver de la recursion
     // debe realizar el giro hacia la direccion del nodo anterior
@@ -1325,7 +1295,7 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
                     while ((direccionRobot % 360) != 180)
                     {
                         contPrueba = 0;
-                        motorGirarIzquierda();
+                        Motor_Girar_Izquierda();
                     }
                 }
                 // Si xAux < 0 debe ir hacia la derecha en la matriz
@@ -1334,7 +1304,7 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
                     while ((direccionRobot % 360) != 0)
                     {
                         contPrueba = 0;
-                        motorGirarIzquierda();
+                        Motor_Girar_Izquierda();
                     }
                 }
             }
@@ -1346,7 +1316,7 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
                     while ((direccionRobot % 360) != 90)
                     {
                         contPrueba = 0;
-                        motorGirarIzquierda();
+                        Motor_Girar_Izquierda();
                     }
                 }
                 // Si yAux < 0 debe ir hacia abajo en la matriz
@@ -1355,19 +1325,18 @@ void retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
                     while ((direccionRobot % 360) != 270)
                     {
                         contPrueba = 0;
-                        motorGirarIzquierda();
+                        Motor_Girar_Izquierda();
                     }
                 }
             }
         }
         break;
     default:
-        printf("default\n");
         break;
     }
 }
 
-void termino_tramo(nodo *actual)
+void Termino_Tramo(nodo *actual)
 {
     datos_recorrido datos;
     vertice verticeActual = actual->actual;

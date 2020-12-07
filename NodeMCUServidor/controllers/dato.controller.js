@@ -4,9 +4,8 @@ const Dato = db.datos;
 module.exports = db;
 module.exports = Dato;
 
-// Create and Save a new Vertice
+//Se crea y se guarda un nuevo vertice
 async function create(req, res) {
-    console.log(req.body);
     if (!req.body) {
         res.status(400).send({
             message: "Content can not be empty!"
@@ -26,7 +25,6 @@ async function create(req, res) {
 
     Dato.create(dato)
         .then(data => {
-            console.log(data);
             res.send(data);
         })
         .catch(err => {
@@ -37,8 +35,8 @@ async function create(req, res) {
         })
 };
 
+//Se genera el archivo csv con los datos del mapa 
 async function csvDatos(req, res) {
-    console.log("Holollllaa");
     const CsvParser = require("json2csv").Parser;
     const nombreHabitacion = req.query.nombreGrafo;
 
@@ -73,29 +71,6 @@ async function csvDatos(req, res) {
         });
 
 };
-// exports.findAll = (req, res) => {
-
-// };
-
-// exports.findOne = (req, res) => {
-
-// };
-
-// exports.update = (req, res) => {
-
-// };
-
-// exports.delete = (req, res) => {
-
-// };
-
-// exports.deleteAll = (req, res) => {
-
-// };
-
-// exports.findAllPublished = (req, res) => {
-
-// };
 
 module.exports = {
     create,

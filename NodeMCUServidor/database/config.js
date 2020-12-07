@@ -3,23 +3,10 @@
 ////////////////////////////////////////
 const Sequelize = require('sequelize');
 
-const sequelizeCon = new Sequelize(`mysql://root:@localhost:3306/aspiradoraBD`,{
-    dialect: 'mysql',
-    protocol: 'mysql',
+// Formato: mysql://usuario:contraseña@localhost:puerto/nombreBD
+const sequelizeCon = new Sequelize(`postgres://postgres:postgres@localhost:5433/asp`,{
+    dialect: 'postgres',
+    protocol: 'postgres',
 });
 
 module.exports = sequelizeCon;
-
-// module.exports = {
-//     HOST: "localhost",
-//     USER: "root",
-//     PASSWORD: "",
-//     DB: "aspiradoraBD",
-//     dialect: "mysql",
-//     pool: {
-//       max: 5,
-//       min: 0,
-//       acquire: 30000,
-//       idle: 10000
-//     }
-//   };

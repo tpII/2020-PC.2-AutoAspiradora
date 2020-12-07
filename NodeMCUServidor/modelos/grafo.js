@@ -1,6 +1,10 @@
 const sequelizeCon = require('../database/config.js');
 const { Sequelize, DataTypes, Model } = require('sequelize');
 
+////////////////////////////////////////////////
+// Se define el modelo de Grafo de recorrido  //
+// para Sequelize                             //
+////////////////////////////////////////////////
 const Grafo = sequelizeCon.define('grafo', {
     nombre: {
         type: DataTypes.STRING,

@@ -61,11 +61,24 @@ typedef struct datos_recorrido{
     float distancia;
 } datos_recorrido;
 
+// Inicializa la lista de vertices del grafo en NULL y le coloca el nombre
 void inicializar_grafo(grafo *grafo, char *nombre);
+
+// Agrega un nuevo vertice la lista de vertices
 nodo* agregar_vertice(grafo *grafo, vertice actual);
+
+// Agrega 2 vertices como adyacentes entre sí
 void agregar_adyacente(nodo *actual, nodo *destino, direccion dirDestino);
+
+// Imprime el grafo completo
 void imprimir_grafo(grafo grafo);
+
+// Dado un vertice y un grafo, busca todos los adyacentes que existen del mismo
+// Utilizando la posicion X y la posicion Y. Siendo adyacentes aquellos que
+// esten una posicion por delante en X o en Y (arriba, abajo, izquierda y derecha) 
 void buscar_y_agregar_adyacentes(nodo *vertice, grafo grafo);
+
+// Dado un grafo calcula el tamaño máximo en X y en Y para poder graficarlo en el servidor
 void calculo_dimensiones_mapa(grafo *grafo);
 
 #endif

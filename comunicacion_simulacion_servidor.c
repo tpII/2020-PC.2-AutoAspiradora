@@ -51,7 +51,6 @@ int enviar_vertices_grafo(CURL *curl, vertice v, char *nombreGrafo, char *url)
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, campos);
     
     int x = curl_easy_perform(curl);
-    printf("La comunicacion retorno: %d\n",x);
     curl_easy_cleanup(curl);
 }
 
@@ -113,31 +112,3 @@ int cerrar_conexion(CURL *curl)
 {
     curl_easy_cleanup(curl);
 }
-
-// void main()
-// {
-//     CURL *curl;
-//     curl = configurar_conexion();
-//     if (curl)
-//     {
-//         consultar_estado_robot(curl, "http://localhost:3000/api/robotAspiradora/consultaEstado");
-//     }
-// }
-
-// void main(){
-
-//     grafo g;
-//     CURL * curl;
-
-//     g.nombre = "Grafo";
-//     g.vertices = 10;
-//     g.xMax = 5;
-//     g.yMax = 2;
-
-//     curl = configurar_conexion();
-//     if (curl != NULL){
-//         enviar_info_grafo(curl,g,"http://localhost:3000/curl");
-//     }
-//     // cerrar_conexion(curl);
-
-// }

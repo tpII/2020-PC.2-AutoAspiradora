@@ -1,5 +1,4 @@
 #include <Servo.h>
-
 // Conexiones sensor ultrasónico
 #define trigPin 13
 #define echoPin 12

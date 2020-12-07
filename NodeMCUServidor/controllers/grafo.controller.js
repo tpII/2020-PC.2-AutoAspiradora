@@ -1,11 +1,12 @@
 const db = require("../modelos/index.js");
-var estado= require("./Estado.js");
+var estado= require("./estado.controller.js");
 const Grafo = db.grafo;
 
 module.exports = db;
 module.exports = Grafo;
 
-// Create and Save a new Vertice
+
+//Se crea y se guarda un nuevo grafo
 async function create(req, res) {
     if (!req.body) {
         res.status(400).send({
@@ -24,7 +25,7 @@ async function create(req, res) {
     estado.resetMapeando();
     Grafo.create(grafo)
         .then(data => {
-            res.send(data);
+            res.send();
         })
         .catch(err => {
             res.status(500).send({
@@ -34,6 +35,7 @@ async function create(req, res) {
         })
 };
 
+//Se busca un grafo en especifico segun el nombre y se lo devuelve
 async function findOne(req, res){
     const nombreHabitacion = req.query.nombreGrafo;
 
@@ -51,7 +53,7 @@ async function findOne(req, res){
         })
     })
 }
-
+//Se buscan todos los grafos y se los devuelve
 async function findAll(req, res){
     db.grafo.findAll({
         attributes: ['nombre']
@@ -65,27 +67,6 @@ async function findAll(req, res){
         })
     })
 };
-
-// exports.findOne = (req, res) => {
-
-// };
-
-// exports.update = (req, res) => {
-
-// };
-
-// exports.delete = (req, res) => {
-
-// };
-
-// exports.deleteAll = (req, res) => {
-
-// };
-
-// exports.findAllPublished = (req, res) => {
-
-// };
-
 module.exports = {
     create,
     findOne,
