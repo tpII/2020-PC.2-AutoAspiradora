@@ -4,9 +4,9 @@
 const Sequelize = require('sequelize');
 
 // Formato: mysql://usuario:contraseña@localhost:puerto/nombreBD
-const sequelizeCon = new Sequelize(`postgres://postgres:postgres@localhost:5432/aspiradora`,{
-    dialect: 'postgres',
-    protocol: 'postgres',
+const sequelizeCon = new Sequelize(`mysql://root:@localhost:3306/aspiradora`,{
+    dialect: 'mysql',
+    protocol: 'mysql',
 });
 
 module.exports = sequelizeCon;
