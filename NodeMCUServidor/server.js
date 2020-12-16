@@ -10,6 +10,6 @@ const app = require('./app');
 
 app.listen(3000, () => console.log("Servidor funcionando en puerto 3000"));
 const db = require("./modelos");
-// db.sequelize.sync({force:true}); // CREA TODAS LAS TABLAS DE NUEVO.
-db.sequelize.sync(); // Solo sincroniza la BD.
+db.sequelize.sync({force:true}); // CREA TODAS LAS TABLAS DE NUEVO.
+//db.sequelize.sync(); // Solo sincroniza la BD.
 

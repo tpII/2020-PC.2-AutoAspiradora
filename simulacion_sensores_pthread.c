@@ -122,18 +122,27 @@ struct estadoRobot estadoRobot;
 // Es ultilizada por el ultrasonico para devolver datos que representen la realidad
 // y poder verificar los resultados.
 // 0 -> lugar accesible, 1 -> obstáculo
+// int habitacion[10][10] =
+//     {
+//         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+//         {1, 0, 1, 1, 1, 1, 1, 0, 0, 1},
+//         {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
+//         {1, 0, 1, 0, 1, 1, 1, 0, 0, 1},
+//         {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
+//         {1, 1, 1, 1, 1, 0, 0, 0, 0, 1},
+//         {1, 0, 1, 0, 0, 0, 1, 1, 0, 1},
+//         {1, 1, 1, 1, 0, 0, 1, 1, 0, 1},
+//         {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
+//         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+    
 int habitacion[10][10] =
     {
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 0, 1, 1, 1, 1, 1, 0, 0, 1},
-        {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
-        {1, 0, 1, 0, 1, 1, 1, 0, 0, 1},
-        {1, 0, 0, 0, 1, 1, 1, 0, 0, 1},
-        {1, 1, 1, 1, 1, 0, 0, 0, 0, 1},
-        {1, 0, 1, 0, 0, 0, 1, 1, 0, 1},
-        {1, 1, 1, 1, 0, 0, 1, 1, 0, 1},
-        {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
-        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+        {1, 1, 1, 1},
+        {1, 0, 1, 1},
+        {1, 0, 0, 1},
+        {1, 0, 1, 1},
+        {1, 1, 1, 1},
+       };
 
 // Posicion del robot dentro de la matriz
 int x = 1;
@@ -316,6 +325,7 @@ void main()
             printf("-------------------------------------\n");
             printf("Se comienza el mapeado de la habitacion\n");
             printf("-------------------------------------\n");
+            getchar(); //Se pausa
             inicializar_grafo(&grafoMapa, nombreHabitacion);
             inicial = Secuencia_Inicio();
             iniciaRecorrido = 1;                  //Se indica que salio de la secuencia de inicio y se inicia el recorrido;
@@ -665,9 +675,10 @@ nodo *MEF_Accion_Automatico(nodo *actual)
     nodo *proximo = NULL;
     int posiblesCaminos = 4;
 
-    printf("--------------------------");
+    getchar(); // Se pausa 
+    printf("--------------------------\n");
     printf("Pos X: %d Pos Y: %d\n",x,y);
-    printf("--------------------------");
+    printf("--------------------------\n");
 
     switch (estadoActual)
     {
@@ -1063,7 +1074,6 @@ nodo *Secuencia_Inicio(void)
     nodo *adyacenteIzquierda;
 
     Servo_Mirar_Centro();
-
     // Se crea el vertice inicial
     v.coordenadas.x = x;
     v.coordenadas.y = y;
@@ -1074,6 +1084,7 @@ nodo *Secuencia_Inicio(void)
     grafoMapa.vertices++;
     // Se envía el vertice al servidor
     printf("Se va a mapear la habitacion: %s\n", grafoMapa.nombre);
+    getchar(); //Se pausa
     enviar_vertices_grafo(curl, inicial->actual, grafoMapa.nombre, url_vertices);
 
     hayObstaculo = Observar(inicial);
@@ -1085,6 +1096,8 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'C';
     }
 
+
+    getchar(); //Se pausa
     Servo_Mirar_Derecha();
     hayObstaculo = Observar(inicial);
     distanciaDerecha = distancia;
@@ -1095,6 +1108,8 @@ nodo *Secuencia_Inicio(void)
         direccionMayorDistancia = 'D';
     }
 
+
+    getchar(); //Se pausa
     Servo_Mirar_Izquierda();
     hayObstaculo = Observar(inicial);
     distanciaIzquierda = distancia;
@@ -1122,8 +1137,9 @@ nodo *Secuencia_Inicio(void)
         estadoActual = GIRANDO_180;
         break;
     }
-    Servo_Mirar_Centro();
 
+    getchar(); //Se pausa
+    Servo_Mirar_Centro();
     return inicial;
 }
 
@@ -1236,9 +1252,11 @@ void Recursion(nodo *actual, nodo *anterior)
     {
         if (((estadoRecursion == GIRANDO_DERECHA) || (estadoRecursion == GIRANDO_IZQUIERDA) || (estadoRecursion == MOVIENDOSE)) && (actual != NULL))
         {
+            getchar(); // Se pausa
             // Revisa el camino derecho
             Servo_Mirar_Derecha();
             hayObstaculo = Observar(actual);
+            getchar(); // Se pausa
             // Vuelve a colocar el servomotor al centro
             Servo_Mirar_Centro();
             if (!hayObstaculo)
@@ -1247,9 +1265,11 @@ void Recursion(nodo *actual, nodo *anterior)
                 estadoActual = GIRANDO_DERECHA;
                 Recursion(actual, anterior);
             }
+            getchar(); // Se pausa
             // Revisa el camino izquierdo
             Servo_Mirar_Izquierda();
             hayObstaculo = Observar(actual);
+            getchar(); // Se pausa
             // Vuelve a colocar el servomotor al centro
             Servo_Mirar_Centro();
             if (!hayObstaculo)
@@ -1266,6 +1286,7 @@ void Recursion(nodo *actual, nodo *anterior)
 
 void Retorna(estado_automatico estadoRecursion, nodo *actual, nodo *anterior)
 {
+    getchar(); // Se pausa
     printf("CAMINO SIN SALIDA, RETORNANDO\n");
     int xAux;
     int yAux;
